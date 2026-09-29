@@ -17,9 +17,11 @@
     "verify": "tsx packages/core/src/cli-verify.ts",
     "dev": "npm run dev --workspace @ssente/reader",
     "build": "npm run build --workspace @ssente/reader",
-    "reports": "tsx packages/reports/src/server.ts"
+    "reports": "tsx packages/reports/src/server.ts",
+    "ussd": "tsx packages/ussd/src/server.ts"
   },
   "devDependencies": {
+    "@types/node": "^26.6.3",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },

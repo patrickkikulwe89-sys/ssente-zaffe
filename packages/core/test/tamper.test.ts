@@ -80,7 +80,12 @@ test('a card whose figures never reconciled is refused even when validly signed'
 
 test('verification survives key reordering, so transport may reserialise freely', () => {
   const signed = signCard(base(), issuer.secretKey);
-  const reordered = JSON.parse(JSON.stringify({ sig: signed.sig, card: { expires: signed.card.expires, ...signed.card } }));
+  // Reverse every key order, which is the harshest reserialisation a transport could apply.
+  const flip = (v: unknown): unknown =>
+    Array.isArray(v) ? v.map(flip)
+    : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).reverse().map(([k, x]) => [k, flip(x)]))
+    : v;
+  const reordered = flip(signed);
   assert.equal(verifyCard(reordered, trusted).ok, true);
 });
 

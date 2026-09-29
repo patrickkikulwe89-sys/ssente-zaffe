@@ -62,6 +62,7 @@ npm run verify apps/reader/public/bundles/840.json
 npm test
 npm run dev               # the offline reader, http://localhost:5173
 npm run reports           # the anonymous reports service, http://127.0.0.1:8787
+npm run ussd              # USSD gateway + simulated feature phone, http://127.0.0.1:8788
 npm run build             # static site in apps/reader/dist/
 ```
 
@@ -140,13 +141,47 @@ The whole service is one file and one table, on `node:sqlite` — no database se
 no dependencies. (`node:sqlite` is still flagged experimental in Node 22; a production
 deployment would pin it or swap in Cloudflare D1, which the same schema fits.)
 
+## The feature phone
+
+The channel that needs no data bundle, no app and no smartphone. `npm run ussd` serves both a
+gateway endpoint and a simulated handset — open it and dial `*384#`.
+
+The endpoint speaks the **Africa's Talking contract**: form-encoded `sessionId`, `phoneNumber`
+and `text`, answered with a body beginning `CON ` or `END `. Pointing a real shortcode at it is
+a configuration change, not a rewrite. A shortcode needs a telco agreement, so it is exercised
+through a simulated handset here; the protocol is the real one either way.
+
+Three constraints shape the implementation, and each one produced a bug worth keeping in mind:
+
+- **182 characters per screen.** A figure like `UGX 4,720,437,000` spends a tenth of the budget,
+  so amounts shorten to `UGX 4.72bn`. A test crawls every reachable screen and fails if any
+  one of them exceeds the limit — averages are no use here.
+- **Labels must stay distinguishable.** Slicing the first 22 characters turned
+  *PHC – Non Wage Recurrent (Government)*, *(PNFP)* and *(Results-based)* into three identical
+  menu entries. Shortening now abbreviates known boilerplate and always preserves the
+  parenthesised qualifier, because that is the only part telling them apart.
+- **The gateway is stateless towards us.** It resends the whole accumulated string each step,
+  so `render()` is a pure function of it — nothing to lose on restart. `9` pages forward; `0`
+  is a real Back, implemented by deleting the selection it undoes.
+
+Every card carries a six-character code, so a figure announced on radio can be dialled up and
+checked: `*384#` → option 2 → `6e1316`.
+
+**Honest limit:** a feature phone cannot check an Ed25519 signature. On this channel the
+gateway verifies before rendering and the caller is trusting the gateway operator, not
+mathematics. Every screen therefore names the source page so the claim can be checked against
+the published PDF by anyone who can reach it. USSD reports land in the same table as web
+reports, which still has nowhere to put a phone number — `phoneNumber` arrives on every
+request and is deliberately never read.
+
 ## Status
 
 Done: source registry with hash verification · deterministic parser (both fiscal years at
 100% reconciliation) · reconciliation gate · card schema · Ed25519 per-card and manifest
 signing · offline verifier CLI · 9 tamper tests · 176 signed bundles · offline reader PWA
 with on-device verification, provenance view, card sharing and card checking · anonymous
-confirm/dispute reporting with offline queue · 17 tests.
+confirm/dispute reporting with offline queue · USSD gateway and simulated feature phone ·
+36 tests · typechecks clean.
 
-Next: Luganda translation layer (reviewed text only, figures untouched) · feature-phone
-USSD simulator · deployment.
+Next: Luganda translation layer (reviewed text only, figures untouched) · deployment ·
+demo video and pitch.
