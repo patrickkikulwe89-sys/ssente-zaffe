@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { fetchIndex, loadVote, checkPasted, ugx, ISSUERS, type Checked, type Index, type VoteRef } from './store.ts';
 import type { Card } from '@core/card.ts';
+import { VERDICT_LABEL, queueReport, flushQueue, fetchCounts, myVerdicts, pendingCount, type Counts } from './reports.ts';
+import type { Verdict } from '../../../packages/reports/src/db.ts';
 
 const useOnline = () => {
   const [on, setOn] = useState(navigator.onLine);
@@ -22,7 +24,44 @@ function Change({ card }: { card: Card }) {
   return <span class={`badge ${pct > 0 ? 'up' : 'down'}`}>{pct > 0 ? '+' : ''}{pct}%</span>;
 }
 
-function CardView({ c }: { c: Checked }) {
+/**
+ * Citizen reports are unsigned. They are rendered in a distinct, explicitly labelled block
+ * so they can never borrow the authority of a verified figure — that boundary is the whole
+ * reason the signed cards are worth anything.
+ */
+function Reports({ card, signed, counts, onReport }: {
+  card: Card; signed: unknown; counts: Partial<Record<Verdict, number>>; onReport: (v: Verdict) => void;
+}) {
+  const mine = myVerdicts()[card.id];
+  const total = Object.values(counts).reduce((a, b) => a + (b ?? 0), 0);
+  return (
+    <section class="reports" aria-label="Citizen reports">
+      <p class="rlabel">Citizen reports · <em>unverified, not government figures</em></p>
+      {total > 0 && (
+        <ul class="rcounts">
+          {(Object.keys(VERDICT_LABEL) as Verdict[]).filter(v => counts[v]).map(v => (
+            <li key={v}><strong>{counts[v]}</strong> {VERDICT_LABEL[v].toLowerCase()}</li>
+          ))}
+        </ul>
+      )}
+      {mine
+        ? <p class="rmine">You reported: <strong>{VERDICT_LABEL[mine]}</strong></p>
+        : <>
+            <p class="hint">Did this reach your community?</p>
+            <div class="rbuttons">
+              {(Object.keys(VERDICT_LABEL) as Verdict[]).map(v => (
+                <button key={v} onClick={() => onReport(v)}>{VERDICT_LABEL[v]}</button>
+              ))}
+            </div>
+            <p class="rprivacy">No account, no phone number, no location. Only your answer is sent.</p>
+          </>}
+    </section>
+  );
+}
+
+function CardView({ c, counts, onReport }: {
+  c: Checked; counts: Partial<Record<Verdict, number>>; onReport: (card: Card, signed: unknown, v: Verdict) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   if (!c.ok) {
@@ -60,6 +99,7 @@ function CardView({ c }: { c: Checked }) {
         <button onClick={() => setOpen(!open)} aria-expanded={open}>{open ? 'Hide source' : 'Where this came from'}</button>
         <button onClick={share}>{copied ? 'Copied ✓' : 'Share this card'}</button>
       </div>
+      <Reports card={card} signed={c.signed} counts={counts} onReport={v => onReport(card, c.signed, v)} />
       {open && (
         <dl class="prov">
           <dt>Document</dt><dd>{card.source.title}</dd>
@@ -101,8 +141,19 @@ export function App() {
   const [cards, setCards] = useState<Checked[] | null>(null);
   const [stats, setStats] = useState({ verified: 0, rejected: 0 });
   const [topic, setTopic] = useState('all');
+  const [counts, setCounts] = useState<Counts>({});
+  const [pending, setPending] = useState(pendingCount());
 
   useEffect(() => { fetchIndex().then(setIndex).catch(e => setErr(String(e.message ?? e))); }, []);
+
+  // Send anything that was reported while offline, as soon as a connection returns.
+  useEffect(() => {
+    if (!online) return;
+    flushQueue().then(sent => {
+      setPending(pendingCount());
+      if (sent && vote) fetchCounts(vote.vote).then(setCounts);
+    });
+  }, [online, vote?.vote]);
 
   const matches = useMemo(() => {
     if (!index) return [];
@@ -113,8 +164,19 @@ export function App() {
 
   const open = async (v: VoteRef) => {
     setVote(v); setCards(null); setTopic('all');
-    try { const r = await loadVote(v.vote); setCards(r.checked); setStats({ verified: r.verified, rejected: r.rejected }); }
+    try {
+      const r = await loadVote(v.vote);
+      setCards(r.checked); setStats({ verified: r.verified, rejected: r.rejected });
+      fetchCounts(v.vote).then(setCounts);
+    }
     catch (e) { setErr(String((e as Error).message)); }
+  };
+
+  const report = (card: Card, signed: unknown, verdict: Verdict) => {
+    queueReport(card.id, signed, verdict);
+    setPending(pendingCount());
+    setCounts(c => ({ ...c, [card.id]: { ...c[card.id], [verdict]: (c[card.id]?.[verdict] ?? 0) + 1 } }));
+    if (online) flushQueue().then(() => setPending(pendingCount()));
   };
 
   const shown = useMemo(() => {
@@ -181,7 +243,8 @@ export function App() {
               {topicsPresent.map(t => <button key={t} class={topic === t ? 'sel' : ''} onClick={() => setTopic(t)}>{t}</button>)}
             </nav>
           )}
-          {shown.map((c, i) => <CardView key={c.ok ? c.card.id : i} c={c} />)}
+          {pending > 0 && <p class="queued">{pending} report{pending > 1 ? 's' : ''} waiting to send — they will go automatically when you are back online.</p>}
+          {shown.map((c, i) => <CardView key={c.ok ? c.card.id : i} c={c} counts={(c.ok && counts[c.card.id]) || {}} onReport={report} />)}
         </>
       )}
     </div>

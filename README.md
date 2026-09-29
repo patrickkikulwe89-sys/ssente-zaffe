@@ -61,6 +61,7 @@ npm run ingest            # fetch + hash-verify + parse + audit + sign  (~40s)
 npm run verify apps/reader/public/bundles/840.json
 npm test
 npm run dev               # the offline reader, http://localhost:5173
+npm run reports           # the anonymous reports service, http://127.0.0.1:8787
 npm run build             # static site in apps/reader/dist/
 ```
 
@@ -112,12 +113,40 @@ It has no accounts, no analytics and no backend. *Share this card* exports a sin
 card; **Check a card** verifies one that arrived by any route — WhatsApp forward, SMS, a file
 copied between phones — with the network switched off.
 
+## Reporting back
+
+A budget line is a promise. The loop closes when someone in the district can say whether the
+money arrived — so each card carries four answers: *yes this happened · only partly · no, not
+that I can see · not sure*.
+
+**A report may only attach to a card that verifies.** The client sends the signed card, not a
+bare id, so nobody can file reports against invented budget lines. **And a report stores
+nothing about the person.** The entire row is:
+
+```
+card_id | vote | verdict | day        -- a UTC date, never a timestamp
+```
+
+No account, no phone number, no device id, no IP address, no user agent, and no free-text
+field someone could be identified through. IP is used to rate-limit in memory and is never
+written down. Reports queue locally when offline and send themselves when a connection
+returns, because the people most worth hearing from have the worst connectivity.
+
+**Reports are not facts, and the interface never lets them look like facts.** They render in
+a separate dashed block labelled *unverified, not government figures*, and never carry the
+✓ that a signed figure earns. That boundary is the reason the signed cards are worth anything.
+
+The whole service is one file and one table, on `node:sqlite` — no database server, no ORM,
+no dependencies. (`node:sqlite` is still flagged experimental in Node 22; a production
+deployment would pin it or swap in Cloudflare D1, which the same schema fits.)
+
 ## Status
 
 Done: source registry with hash verification · deterministic parser (both fiscal years at
 100% reconciliation) · reconciliation gate · card schema · Ed25519 per-card and manifest
 signing · offline verifier CLI · 9 tamper tests · 176 signed bundles · offline reader PWA
-with on-device verification, provenance view, card sharing and card checking.
+with on-device verification, provenance view, card sharing and card checking · anonymous
+confirm/dispute reporting with offline queue · 17 tests.
 
-Next: Luganda translation layer (reviewed text only, figures untouched) · anonymous
-confirm/dispute reporting · feature-phone USSD simulator.
+Next: Luganda translation layer (reviewed text only, figures untouched) · feature-phone
+USSD simulator · deployment.

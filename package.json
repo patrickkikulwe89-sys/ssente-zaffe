@@ -16,7 +16,8 @@
     "sign": "tsx packages/core/src/cli-sign.ts",
     "verify": "tsx packages/core/src/cli-verify.ts",
     "dev": "npm run dev --workspace @ssente/reader",
-    "build": "npm run build --workspace @ssente/reader"
+    "build": "npm run build --workspace @ssente/reader",
+    "reports": "tsx packages/reports/src/server.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

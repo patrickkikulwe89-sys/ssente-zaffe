@@ -84,3 +84,16 @@ textarea { width: 100%; padding: .6rem; border: 2px solid var(--line); border-ra
 .verdict.good { border-color: var(--good); }
 .verdict.bad { border-color: var(--bad); color: var(--bad); }
 .src { margin-top: 2rem; color: var(--muted); font-size: .8rem; border-top: 1px solid var(--line); padding-top: .8rem; }
+
+/* Citizen reports: deliberately unlike a verified card — dashed, muted, never a ✓. */
+.reports { margin-top: .7rem; padding: .6rem .7rem; border: 1px dashed var(--line);
+  border-radius: .5rem; background: transparent; }
+.rlabel { margin: 0 0 .4rem; font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.rlabel em { text-transform: none; letter-spacing: 0; color: var(--warn); font-style: normal; font-weight: 600; }
+.rcounts { list-style: none; display: flex; flex-wrap: wrap; gap: .1rem .9rem; padding: 0; margin: 0 0 .4rem; font-size: .86rem; color: var(--muted); }
+.rbuttons { display: flex; flex-wrap: wrap; gap: .35rem; }
+.rbuttons button { border: 1px solid var(--line); background: var(--chip); color: var(--fg);
+  border-radius: .4rem; padding: .35rem .6rem; font: inherit; font-size: .84rem; cursor: pointer; }
+.rmine { margin: .2rem 0; font-size: .88rem; color: var(--muted); }
+.rprivacy { margin: .4rem 0 0; font-size: .76rem; color: var(--muted); }
+.queued { font-size: .86rem; color: var(--warn); border-left: 3px solid var(--warn); padding-left: .6rem; }
