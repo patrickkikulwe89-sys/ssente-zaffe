@@ -1,0 +1,28 @@
+{
+  "name": "ssente-zaffe",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --import tsx --test packages/*/test/*.test.ts",
+    "keygen": "tsx packages/core/src/cli-keygen.ts",
+    "ingest": "tsx packages/ingest/src/cli-ingest.ts",
+    "sign": "tsx packages/core/src/cli-sign.ts",
+    "verify": "tsx packages/core/src/cli-verify.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.7.0",
+    "@noble/hashes": "^1.6.1",
+    "pdf-parse": "^2.4.5",
+    "zod": "^3.24.1"
+  }
+}

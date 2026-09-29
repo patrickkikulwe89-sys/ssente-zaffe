@@ -1,0 +1,24 @@
+{
+  "sources": [
+    {
+      "docId": "ug-mofped-lg-estimates-2026-27",
+      "title": "Draft Estimates of Revenue and Expenditure (Recurrent and Development) FY 2026/27, Volume II: Local Government Votes",
+      "publisher": "Ministry of Finance, Planning and Economic Development, Uganda",
+      "url": "https://budget.finance.go.ug/sites/default/files/National%20Budget%20docs/Draft%20Budget%20Estimates%20for%20Local%20Governments%20Vol%202.%20FY%202026-27.pdf",
+      "cache": "lg2627.pdf",
+      "bytes": 10740372,
+      "sha256": "430e52786f8814d2ce985f70d178dd772592e58c09b67f5d3b6a6447ff836cbe",
+      "retrieved": "2026-09-29T00:00:00.000Z"
+    },
+    {
+      "docId": "ug-mofped-lg-estimates-2025-26",
+      "title": "Draft Estimates of Revenue and Expenditure (Recurrent and Development) FY 2025/26, Volume II: Local Government Votes",
+      "publisher": "Ministry of Finance, Planning and Economic Development, Uganda",
+      "url": "https://budget.finance.go.ug/sites/default/files/National%20Budget%20docs/Draft%20Budget%20Estimates%20for%20Local%20Governments%20Vol.%202%20FY%202025-26.pdf",
+      "cache": "lg2526.pdf",
+      "bytes": 10222352,
+      "sha256": "87b7afdf678ffeaa2c3ff7ae67cea5978843e15a611bad18226627a20430d653",
+      "retrieved": "2026-09-29T00:00:00.000Z"
+    }
+  ]
+}

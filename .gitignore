@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.pdf
+*.txt
+!README.txt
+keys/*.secret.json
+.DS_Store
+
+# generated: reproduce with `npm run ingest` (source is hash-verified)
+apps/reader/public/bundles/
+.cache/
+content/cards/quarantine.json
