@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { fetchIndex, loadVote, checkPasted, ugx, ISSUERS, type Checked, type Index, type VoteRef } from './store.ts';
 import type { Card } from '@core/card.ts';
-import { VERDICT_LABEL, queueReport, flushQueue, fetchCounts, myVerdicts, pendingCount, type Counts } from './reports.ts';
+import { VERDICT_LABEL, queueReport, flushQueue, fetchCounts, myVerdicts, pendingCount, REPORTING_ENABLED, type Counts } from './reports.ts';
 import type { Verdict } from '../../../packages/reports/src/db.ts';
 
 const useOnline = () => {
@@ -44,7 +44,9 @@ function Reports({ card, signed, counts, onReport }: {
           ))}
         </ul>
       )}
-      {mine
+      {!REPORTING_ENABLED
+        ? <p class="rprivacy">Reporting is not available on this build — the budget figures above still verify offline.</p>
+        : mine
         ? <p class="rmine">You reported: <strong>{VERDICT_LABEL[mine]}</strong></p>
         : <>
             <p class="hint">Did this reach your community?</p>

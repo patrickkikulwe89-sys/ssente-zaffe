@@ -8,7 +8,14 @@ import { resolve } from 'node:path';
 const trustedFile = JSON.parse(readFileSync(resolve(__dirname, '../../keys/trusted.json'), 'utf8')) as
   Record<string, { issuer: string; publicKey: string }>;
 
+/**
+ * GitHub Pages serves the site from a repository subpath, so the base has to be explicit:
+ * the service worker scope and the web manifest are both resolved against it.
+ */
+const BASE = process.env.BASE_PATH ?? '/';
+
 export default defineConfig({
+  base: BASE,
   plugins: [
     preact(),
     VitePWA({
@@ -20,7 +27,8 @@ export default defineConfig({
         theme_color: '#0f766e',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/',
+        start_url: BASE,
+        scope: BASE,
       },
       workbox: {
         // Precache the shell and the 21 KB district index only. District bundles are

@@ -1,0 +1,69 @@
+name: Deploy reader to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The budget PDFs are 21 MB and never change once published, so they are cached
+      # against the source registry. Ingest verifies their SHA-256 either way.
+      - name: Cache source documents
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: mofped-${{ hashFiles('content/sources/sources.json') }}
+
+      # A stable key means a card shared today still verifies against tomorrow's build.
+      # Without the secret, an ephemeral key is used and the build is labelled as a preview.
+      - name: Prepare signing key
+        env:
+          SSENTE_ISSUER_SECRET: ${{ secrets.SSENTE_ISSUER_SECRET }}
+          SSENTE_ISSUER: Ssente Zaffe
+        run: npm run key:ci
+
+      - name: Ingest, audit and sign
+        run: npm run ingest
+
+      - run: npm test
+
+      - name: Build the reader
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_REPORTS_URL: ${{ vars.REPORTS_URL }}
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/reader/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

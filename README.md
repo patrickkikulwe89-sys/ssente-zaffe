@@ -174,6 +174,35 @@ the published PDF by anyone who can reach it. USSD reports land in the same tabl
 reports, which still has nowhere to put a phone number — `phoneNumber` arrives on every
 request and is deliberately never read.
 
+## Deploying
+
+The reader is a static site with no backend, so it deploys as files. `.github/workflows/deploy.yml`
+builds it on every push to `main` and publishes to GitHub Pages:
+
+    npm ci → restore cached PDFs → prepare signing key → ingest (hash-verify, parse, audit, sign)
+           → npm test → build with BASE_PATH → upload → deploy
+
+Generated bundles are not committed. CI rebuilds them from documents whose SHA-256 is pinned in
+`content/sources/sources.json`, which is stronger provenance than committing derived JSON: the
+deployed figures are reproducible from the government's own files or the build fails.
+
+**One repository setting is required**, once: *Settings → Pages → Build and deployment →
+Source: **GitHub Actions***.
+
+**One secret is strongly recommended**: `SSENTE_ISSUER_SECRET`, the 64-hex signing key from
+`keys/issuer.secret.json`. Without it each build generates a fresh key, so a card someone
+shared last week stops verifying — which would defeat the point of signing cards at all. With
+it set, builds are reproducible and cards stay portable. The build labels itself an *ephemeral
+preview* when the secret is absent, rather than pretending otherwise.
+
+**Optional**: a repository variable `REPORTS_URL` pointing at a deployed reports service. Left
+unset, the static site disables reporting and says so on each card; the budget figures still
+verify offline, because verification never needed a server.
+
+The reports service and USSD gateway are small Node processes with a SQLite file, so they need
+a host that runs containers rather than static files. They are not required for the reader to
+work.
+
 ## Status
 
 Done: source registry with hash verification · deterministic parser (both fiscal years at
@@ -183,5 +212,7 @@ with on-device verification, provenance view, card sharing and card checking · 
 confirm/dispute reporting with offline queue · USSD gateway and simulated feature phone ·
 36 tests · typechecks clean.
 
-Next: Luganda translation layer (reviewed text only, figures untouched) · deployment ·
-demo video and pitch.
+Deployed: GitHub Pages workflow, subpath-safe build, reproducible from pinned source hashes.
+
+Next: Luganda translation layer (reviewed text only, figures untouched) · hosting for the
+reports service · demo video and pitch.

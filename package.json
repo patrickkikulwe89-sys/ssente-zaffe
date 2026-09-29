@@ -18,7 +18,8 @@
     "dev": "npm run dev --workspace @ssente/reader",
     "build": "npm run build --workspace @ssente/reader",
     "reports": "tsx packages/reports/src/server.ts",
-    "ussd": "tsx packages/ussd/src/server.ts"
+    "ussd": "tsx packages/ussd/src/server.ts",
+    "key:ci": "tsx packages/core/src/cli-key-from-env.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",

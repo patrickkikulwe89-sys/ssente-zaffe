@@ -7,7 +7,14 @@ import type { Verdict } from '../../../packages/reports/src/db.ts';
  * most worth hearing from are the ones with the worst connectivity. Nothing about the
  * person is attached — the payload is the signed card plus one of four verdicts.
  */
-const API = (import.meta as { env?: Record<string, string> }).env?.VITE_REPORTS_URL ?? 'http://127.0.0.1:8787';
+/**
+ * Where reports go. A static-only deployment (GitHub Pages, an offline copy on a memory card)
+ * has no service to send them to, so reporting is switched off and says so rather than
+ * queueing answers that will never leave the phone.
+ */
+const configured = (import.meta as { env?: Record<string, string> }).env?.VITE_REPORTS_URL;
+const API = configured === undefined ? 'http://127.0.0.1:8787' : configured;
+export const REPORTING_ENABLED = API !== '';
 const QUEUE = 'ssente.queue.v1';
 const MINE = 'ssente.mine.v1';
 
