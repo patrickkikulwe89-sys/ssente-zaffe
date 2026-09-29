@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "engines": {
     "node": ">=20"
@@ -13,7 +14,9 @@
     "keygen": "tsx packages/core/src/cli-keygen.ts",
     "ingest": "tsx packages/ingest/src/cli-ingest.ts",
     "sign": "tsx packages/core/src/cli-sign.ts",
-    "verify": "tsx packages/core/src/cli-verify.ts"
+    "verify": "tsx packages/core/src/cli-verify.ts",
+    "dev": "npm run dev --workspace @ssente/reader",
+    "build": "npm run build --workspace @ssente/reader"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

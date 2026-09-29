@@ -60,6 +60,8 @@ npm run keygen            # one Ed25519 issuer key; the secret stays on your mac
 npm run ingest            # fetch + hash-verify + parse + audit + sign  (~40s)
 npm run verify apps/reader/public/bundles/840.json
 npm test
+npm run dev               # the offline reader, http://localhost:5173
+npm run build             # static site in apps/reader/dist/
 ```
 
 `npm run verify` does what the offline reader does — checks every signature, checks the
@@ -74,7 +76,7 @@ content/cards/      quarantine.json, written only when a group fails to reconcil
 keys/               trusted.json (committed) · issuer.secret.json (never committed)
 packages/core/      card schema, canonical JSON, Ed25519 sign/verify, CLIs
 packages/ingest/    the MoFPED Volume II parser, reconciliation gate, card generation
-apps/reader/        offline-first PWA  (next step)
+apps/reader/        offline-first reader PWA (Preact + Vite, service worker)
 ```
 
 ## Design notes
@@ -93,11 +95,29 @@ alone. The bundle manifest lists card hashes, which is the only way a reader can
 **No blockchain.** Signatures already provide integrity and provenance. A chain would add
 bandwidth cost and no property this project needs.
 
+## The reader
+
+A static, serverless PWA. It compiles the trust list in, fetches a district bundle, and
+**verifies every signature on the device** before anything is shown as fact. A card that
+fails is rendered as a refusal, not as information.
+
+| | |
+|---|---|
+| App payload | 104 KB raw, **33 KB gzipped** JS · 1.5 KB CSS |
+| Precached on first visit | shell + the 21 KB district index only |
+| District bundles | fetched on demand, ~12 KB gzipped, cached for offline reuse |
+| Runtime | Preact, chosen over React purely to keep the payload small |
+
+It has no accounts, no analytics and no backend. *Share this card* exports a single signed
+card; **Check a card** verifies one that arrived by any route — WhatsApp forward, SMS, a file
+copied between phones — with the network switched off.
+
 ## Status
 
 Done: source registry with hash verification · deterministic parser (both fiscal years at
-100% reconciliation) · reconciliation gate · card schema · Ed25519 signing · offline verifier ·
-9 tamper tests · 176 signed bundles.
+100% reconciliation) · reconciliation gate · card schema · Ed25519 per-card and manifest
+signing · offline verifier CLI · 9 tamper tests · 176 signed bundles · offline reader PWA
+with on-device verification, provenance view, card sharing and card checking.
 
-Next: offline-first reader PWA · Luganda translation layer (reviewed text only) · anonymous
+Next: Luganda translation layer (reviewed text only, figures untouched) · anonymous
 confirm/dispute reporting · feature-phone USSD simulator.
