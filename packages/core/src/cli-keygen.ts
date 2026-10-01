@@ -4,7 +4,7 @@ import { bytesToHex } from '@noble/hashes/utils';
 import { generateKeypair } from './sign.ts';
 
 /** The secret key never leaves this machine; the public key is committed as the trust list. */
-const dir = 'keys';
+const dir = process.env.KEYS_DIR ?? 'keys';
 const secretPath = path.join(dir, 'issuer.secret.json');
 if (fs.existsSync(secretPath)) {
   console.error(`${secretPath} already exists — refusing to overwrite a signing key.`);

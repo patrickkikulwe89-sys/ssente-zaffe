@@ -192,6 +192,13 @@ keep these in place:
 Test isolation note: a test that deliberately exhausts a rate limiter must create its own
 server, or every later test against the shared one gets `429`.
 
+**Never exercise the key CLIs against the real `keys/` directory.** They write the signing
+key, so running `cli-key-from-env.ts` to try an input destroys it — this happened once and
+cost the development key. Both CLIs now honour `KEYS_DIR` and refuse to overwrite an existing
+secret unless `FORCE_KEY_OVERWRITE=1`; use a scratch `KEYS_DIR` for anything exploratory. The
+only durable copy of a production key is the repository secret, so treat
+`keys/issuer.secret.json` as a cache, not an original.
+
 ## Known limits — do not claim otherwise
 
 - **Kampala is covered**, via Vote 122 (KCCA) and its five divisions. Searching a division name

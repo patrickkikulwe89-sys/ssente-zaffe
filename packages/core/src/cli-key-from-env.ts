@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { ed25519 } from '@noble/curves/ed25519';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { generateKeypair, keyId } from './sign.ts';
@@ -31,6 +32,19 @@ if (import.meta.url !== `file://${process.argv[1]}`) {
   // Imported for its helper (tests). Do not touch the filesystem.
 } else {
 
+/**
+ * Where keys are written. Overridable so this can be exercised without touching a real key:
+ * running it against the live directory is how a working signing key gets destroyed.
+ */
+const KEYS = process.env.KEYS_DIR ?? 'keys';
+const secretPath = path.join(KEYS, 'issuer.secret.json');
+if (fs.existsSync(secretPath) && process.env.FORCE_KEY_OVERWRITE !== '1') {
+  console.error(`${secretPath} already exists — refusing to overwrite a signing key.`);
+  console.error('  CI starts from a clean checkout, so this should not happen there.');
+  console.error('  To try this locally, set KEYS_DIR to a scratch directory.');
+  process.exit(1);
+}
+
 const supplied = process.env.SSENTE_ISSUER_SECRET;
 const hex = supplied ? normalise(supplied) : '';
 const issuer = process.env.SSENTE_ISSUER ?? 'Ssente Zaffe';
@@ -53,9 +67,9 @@ const publicKey = ed25519.getPublicKey(secretKey);
 const id = keyId(publicKey);
 const label = ephemeral ? `${issuer} (ephemeral preview key)` : issuer;
 
-fs.mkdirSync('keys', { recursive: true });
-fs.writeFileSync('keys/issuer.secret.json', JSON.stringify({ keyId: id, issuer: label, secretKey: bytesToHex(secretKey) }), { mode: 0o600 });
-fs.writeFileSync('keys/trusted.json', JSON.stringify({ [id]: { issuer: label, publicKey: bytesToHex(publicKey) } }, null, 2));
+fs.mkdirSync(KEYS, { recursive: true });
+fs.writeFileSync(secretPath, JSON.stringify({ keyId: id, issuer: label, secretKey: bytesToHex(secretKey) }), { mode: 0o600 });
+fs.writeFileSync(path.join(KEYS, 'trusted.json'), JSON.stringify({ [id]: { issuer: label, publicKey: bytesToHex(publicKey) } }, null, 2));
 console.log(`${ephemeral ? '⚠ ephemeral' : 'stable'} signing key ${id} (${label})`);
 if (ephemeral) console.log('  cards from this build will not verify against other builds — set SSENTE_ISSUER_SECRET for a stable key');
 
