@@ -1,5 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { verifyCard } from '../../core/src/sign.ts';
 import { openDb, VERDICTS, type Store, type Verdict } from './db.ts';
 import { limiter, readBody, BodyTooLarge } from './limit.ts';
@@ -18,8 +20,11 @@ import { limiter, readBody, BodyTooLarge } from './limit.ts';
  */
 const DISCLAIMER = 'Citizen reports are unverified observations, not signed government figures.';
 
+/** Resolved from this file so the service does not depend on the working directory. */
+const ROOT = process.env.SSENTE_ROOT ?? path.resolve(fileURLToPath(import.meta.url), '../../../..');
+
 type Trusted = Record<string, string>;
-const loadTrusted = (file = 'keys/trusted.json'): Trusted =>
+const loadTrusted = (file = process.env.TRUSTED_KEYS ?? path.join(ROOT, 'keys/trusted.json')): Trusted =>
   Object.fromEntries(Object.entries(
     JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, { publicKey: string }>
   ).map(([k, v]) => [k, v.publicKey]));
@@ -67,7 +72,8 @@ export function createReportsServer(opts: { store: Store; trusted: Trusted; perH
     if (req.method === 'GET' && url.pathname === '/aggregate') {
       const vote = url.searchParams.get('vote') ?? '';
       if (!/^\d{3}$/.test(vote)) return json(res, 400, { error: 'vote must be three digits' }, origin);
-      return json(res, 200, { vote, disclaimer: DISCLAIMER, counts: opts.store.aggregate(vote) }, origin);
+      try { return json(res, 200, { vote, disclaimer: DISCLAIMER, counts: opts.store.aggregate(vote) }, origin); }
+      catch { return json(res, 503, { error: 'counts temporarily unavailable' }, origin); }
     }
 
     if (req.method === 'POST' && url.pathname === '/reports') {
@@ -82,7 +88,8 @@ export function createReportsServer(opts: { store: Store; trusted: Trusted; perH
       if (!VERDICTS.includes(body.verdict as Verdict)) return json(res, 400, { error: `verdict must be one of ${VERDICTS.join(', ')}` }, origin);
       const check = verifyCard(body.signed, opts.trusted);
       if (!check.ok) return json(res, 400, { error: `report refused: ${check.reason}` }, origin);
-      opts.store.insert(check.card.id, check.card.scope.voteCode, body.verdict as Verdict);
+      try { opts.store.insert(check.card.id, check.card.scope.voteCode, body.verdict as Verdict); }
+      catch { return json(res, 503, { error: 'could not record the report, please try again later' }, origin); }
       return json(res, 201, { ok: true, cardId: check.card.id, disclaimer: DISCLAIMER }, origin);
     }
 
@@ -92,7 +99,7 @@ export function createReportsServer(opts: { store: Store; trusted: Trusted; perH
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const port = Number(process.env.PORT ?? 8787);
-  const store = openDb(process.env.REPORTS_DB ?? 'reports.db');
+  const store = openDb(process.env.REPORTS_DB ?? path.join(ROOT, 'reports.db'));
   createReportsServer({ store, trusted: loadTrusted() }).listen(port, () => {
     console.log(`reports service on http://127.0.0.1:${port}`);
     console.log('  POST /reports          { signed: <signed card>, verdict }');

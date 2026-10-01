@@ -179,3 +179,11 @@ test('digits typed where a district name is expected are rejected clearly', () =
   assert.equal(r.end, true);
   assert.match(r.text, /type letters, not numbers/);
 });
+
+test('a district whose bundle cannot be read says so instead of breaking', () => {
+  const broken: Data = { ...data, linesFor: () => [] };
+  const r = render('1*wakiso', broken);
+  assert.equal(r.end, true);
+  assert.match(r.text, /temporarily unavailable/);
+  assert.ok(r.text.replace(/^END /, '').length <= SCREEN_LIMIT);
+});

@@ -203,6 +203,8 @@ export function render(raw: string, d: Data): Reply {
   }
 
   const lines = d.linesFor(chosen.vote);
+  if (lines.length === 0)
+    return screen(`Budget information for ${chosen.name} is temporarily unavailable. Please try again later.`, true);
   const present = TOPICS.filter(t => lines.some(l => l.topic === t));
   const rt = select(digits, present, present.map(t => t.charAt(0).toUpperCase() + t.slice(1)),
                     `${chosen.name}\n${lines.length} budget lines. Choose a sector:`);

@@ -7,7 +7,7 @@
     "apps/*"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   },
   "scripts": {
     "test": "node --import tsx --test packages/*/test/*.test.ts",
@@ -18,7 +18,9 @@
     "build": "npm run build --workspace @ssente/reader",
     "reports": "tsx packages/reports/src/server.ts",
     "ussd": "tsx packages/ussd/src/server.ts",
-    "key:ci": "tsx packages/core/src/cli-key-from-env.ts"
+    "key:ci": "tsx packages/core/src/cli-key-from-env.ts",
+    "start:reports": "node packages/reports/src/server.ts",
+    "start:ussd": "node packages/ussd/src/server.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",

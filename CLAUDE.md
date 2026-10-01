@@ -24,6 +24,21 @@ npm run ussd              # USSD gateway + simulated feature phone on :8788
 npx tsc --noEmit -p tsconfig.json   # typecheck (there is no lint step)
 ```
 
+Running the services **elsewhere** (a server, a container, systemd): Node 22 executes the
+TypeScript directly, so production needs no `tsx` and no build step, and all paths resolve
+from the module rather than the working directory:
+
+```bash
+npm ci --omit=dev          # devDependencies are not needed to run the services
+npm run start:ussd         # or: node packages/ussd/src/server.ts
+npm run start:reports
+```
+
+Overridable: `SSENTE_ROOT`, `BUNDLE_DIR`, `TRUSTED_KEYS`, `REPORTS_DB`, `PORT`,
+`ALLOWED_ORIGINS`, `USSD_ALLOW_IPS`. **Node >= 22.18 is required** — 22.5 for `node:sqlite`,
+22.18 for running `.ts` unflagged. The `Dockerfile` builds both services and mounts bundles,
+the trust list and the database at `/data`, so the image holds nothing secret.
+
 Run one test file, or one test by name:
 
 ```bash
@@ -37,8 +52,11 @@ every run; it is expected.
 
 ## Architecture
 
-Four workspace packages plus one app. The dependency direction is one-way: everything
-depends on `core`, `core` depends on nothing in the repo.
+Four workspace folders under `packages/` plus `apps/reader`. The dependency direction is
+one-way: everything depends on `core`, and `core` depends on nothing in the repo. Third-party
+dependencies are declared **once in the root `package.json`** and hoisted; the per-package
+manifests only name the package, and cross-package imports are relative paths
+(`../../core/src/sign.ts`), not package specifiers.
 
 - **`packages/core`** — the card schema (zod), canonical JSON, Ed25519 sign/verify, and CLIs.
   `canonicalize()` is the linchpin: signatures only mean anything if two machines serialise a
@@ -111,6 +129,11 @@ Each of these cost real accuracy and is covered by a test. Do not reintroduce th
   fits; a fixed six overflowed and lost the last option to truncation), and `0` is a real
   Back implemented by `collapseBacks()` deleting the selection it undoes — which keeps
   `render()` pure over the accumulated input.
+- **A missing bundle file crashed the entire gateway.** `readFileSync` in `linesFor` was
+  unguarded, so one absent vote file exited the process for every caller. Bundle reads now
+  degrade to an empty list, the menu says the district is temporarily unavailable, and the
+  request handler always returns a screen. Only surfaced by running the container against
+  incomplete data — local runs always had all 176 files.
 - **USSD screens are hard-limited to 182 characters.** A test crawls every reachable screen
   and fails if any one exceeds it; averages are useless here.
 

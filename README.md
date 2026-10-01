@@ -212,9 +212,51 @@ preview* when the secret is absent, rather than pretending otherwise.
 unset, the static site disables reporting and says so on each card; the budget figures still
 verify offline, because verification never needed a server.
 
-The reports service and USSD gateway are small Node processes with a SQLite file, so they need
-a host that runs containers rather than static files. They are not required for the reader to
-work.
+### Running the two services elsewhere
+
+The reader is static and needs no runtime. The reports API and USSD gateway are small Node
+processes. **Node 22 executes the TypeScript directly**, so production needs no `tsx`, no
+build step and no devDependencies, and every path resolves from the module rather than the
+working directory:
+
+```bash
+npm ci --omit=dev
+npm run start:reports     # or: node packages/reports/src/server.ts
+npm run start:ussd        # or: node packages/ussd/src/server.ts
+```
+
+Requires **Node >= 22.18** (22.5 for `node:sqlite`, 22.18 to run `.ts` unflagged).
+
+| Variable | Purpose |
+|---|---|
+| `PORT` | listen port (reports 8787, gateway 8788) |
+| `BUNDLE_DIR` | signed bundles; the gateway reads them, so it needs `npm run ingest` output |
+| `TRUSTED_KEYS` | path to `trusted.json` |
+| `REPORTS_DB` | SQLite file; put it on a volume you back up |
+| `ALLOWED_ORIGINS` | reports: comma-separated browser origins. **Set this before exposing it** |
+| `USSD_ALLOW_IPS` | gateway: comma-separated telco gateway addresses. **Set this before exposing it** |
+| `SSENTE_ROOT` | overrides where the defaults above are resolved from |
+
+`Dockerfile` builds both. It holds no data and no keys — bundles, the trust list and the
+database are mounted at `/data`:
+
+```bash
+docker build -t ssente .
+docker run -p 8788:8788 -v /srv/ssente:/data ssente                                  # gateway
+docker run -p 8787:8787 -v /srv/ssente:/data ssente node packages/reports/src/server.ts
+```
+
+Bundles are generated, not committed, so produce them before deploying — run `npm run ingest`
+and copy `apps/reader/public/bundles` to the volume, or run ingest on the host with the
+signing key available.
+
+### Wiring a real shortcode
+
+The gateway already speaks the Africa's Talking contract, so going live is configuration, not
+code: expose it over HTTPS at a public URL, register that URL as the service-code callback,
+and set `USSD_ALLOW_IPS` to the operator's gateway addresses. Note that per-IP rate limiting
+is then wrong — every request arrives from the operator — so limit per subscriber using a
+keyed hash of the MSISDN held only in memory, never the number itself.
 
 ## Status
 

@@ -19,7 +19,10 @@ is required for the reader to work.
 | 6 | `keys/issuer.secret.json` written mode `644` | World-readable signing key on a shared machine | Written `0600` by both key CLIs |
 | 7 | Parser joined wrapped lines with no length bound | A malformed or hostile document could feed the lazy-quantifier regex an unbounded line | 600-character ceiling alongside the six-line rule (longest genuine label: 147 characters) |
 
-Also fixed while reviewing: `npm run sign` pointed at a file that never existed.
+| 8 | One missing or unreadable bundle file crashed the whole USSD process | Availability. A partly synced directory, a bad mount or a deleted file took the gateway down for every caller — and anyone reaching a vote with a missing file could trigger it deliberately | The read degrades to "no information for this district"; the request handler always returns a screen; storage faults in the reports service answer `503` instead of throwing. Found by running the container against deliberately incomplete data |
+
+Also fixed while reviewing: `npm run sign` pointed at a file that never existed, and
+`packages/core` and `packages/ingest` had no manifest so were never really workspaces.
 
 ## The ten
 

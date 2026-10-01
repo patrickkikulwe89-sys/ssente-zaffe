@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { verifyCard } from '../../core/src/sign.ts';
 import { openDb } from '../../reports/src/db.ts';
 import { limiter, readBody } from '../../reports/src/limit.ts';
@@ -19,7 +20,14 @@ import { topicOf } from './topic.ts';
  * `phoneNumber` arrives on every request and is deliberately never read. Reports filed over
  * USSD land in the same table as reports from the web reader, which has no column for it.
  */
-const BUNDLES = process.env.BUNDLE_DIR ?? 'apps/reader/public/bundles';
+/**
+ * Paths resolve from this file, not from the working directory, so the service runs from
+ * anywhere — a systemd unit, a container, a cron job — without a `cd` first. Every one can
+ * still be overridden, which is how a container points at mounted data.
+ */
+const ROOT = process.env.SSENTE_ROOT ?? path.resolve(fileURLToPath(import.meta.url), '../../../..');
+const BUNDLES = process.env.BUNDLE_DIR ?? path.join(ROOT, 'apps/reader/public/bundles');
+const TRUSTED_KEYS = process.env.TRUSTED_KEYS ?? path.join(ROOT, 'keys/trusted.json');
 
 /**
  * Optional allowlist of gateway addresses. With a real shortcode every request arrives from
@@ -34,14 +42,14 @@ const writeLimit = limiter(30);   // filing a verdict is the abuse vector, not b
 
 function loadData(): Data {
   const trusted = Object.fromEntries(Object.entries(
-    JSON.parse(fs.readFileSync('keys/trusted.json', 'utf8')) as Record<string, { publicKey: string }>
+    JSON.parse(fs.readFileSync(TRUSTED_KEYS, 'utf8')) as Record<string, { publicKey: string }>
   ).map(([k, v]) => [k, v.publicKey]));
   const index = JSON.parse(fs.readFileSync(path.join(BUNDLES, 'index.json'), 'utf8')) as {
     years: { a: string; b: string }; votes: { vote: string; name: string; level: string }[];
   };
   const votes: Vote[] = index.votes.map(v => ({ vote: v.vote, name: v.name, level: v.level }));
   const cache = new Map<string, Line[]>();
-  const store = openDb(process.env.REPORTS_DB ?? 'reports.db');
+  const store = openDb(process.env.REPORTS_DB ?? path.join(ROOT, 'reports.db'));
 
   return {
     years: index.years,
@@ -52,7 +60,17 @@ function loadData(): Data {
       if (!/^\d{3}$/.test(vote)) return [];
       const hit = cache.get(vote);
       if (hit) return hit;
-      const body = JSON.parse(fs.readFileSync(path.join(BUNDLES, `${vote}.json`), 'utf8')) as { cards: unknown[] };
+      // A bundle can be missing or unreadable — a partly synced directory, a bad mount, a
+      // deleted file. That must degrade to "no information for this district", never take the
+      // gateway down for every other caller.
+      let body: { cards: unknown[] };
+      try {
+        body = JSON.parse(fs.readFileSync(path.join(BUNDLES, `${vote}.json`), 'utf8')) as { cards: unknown[] };
+      } catch {
+        console.warn(`bundle unavailable for vote ${vote}`);
+        cache.set(vote, []);
+        return [];
+      }
       // Only signed, reconciled cards ever reach a screen — the same gate the web reader applies.
       const lines: Line[] = [];
       for (const signed of body.cards) {
@@ -116,8 +134,15 @@ createServer(async (req, res) => {
     // form.get('phoneNumber') exists and is intentionally not read.
     const text = form.get('text') ?? '';
     currentIp = ip;
-    const reply = render(text, data);
-    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'access-control-allow-origin': '*' });
+    // A caller must always get a screen. An unexpected fault ends their session politely
+    // instead of dropping the connection and killing the process for everyone else.
+    let reply;
+    try { reply = render(text, data); }
+    catch (e) {
+      console.error('render failed:', e instanceof Error ? e.message : e);
+      reply = { text: 'END Service temporarily unavailable. Please try again shortly.', end: true };
+    }
+    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' });
     return res.end(reply.text);
   }
 

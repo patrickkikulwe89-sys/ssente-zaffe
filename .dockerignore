@@ -1,0 +1,9 @@
+node_modules
+.git
+.cache
+apps/reader/dist
+apps/reader/public/bundles
+keys
+*.db
+*.pdf
+*.txt
