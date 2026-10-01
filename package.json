@@ -13,7 +13,6 @@
     "test": "node --import tsx --test packages/*/test/*.test.ts",
     "keygen": "tsx packages/core/src/cli-keygen.ts",
     "ingest": "tsx packages/ingest/src/cli-ingest.ts",
-    "sign": "tsx packages/core/src/cli-sign.ts",
     "verify": "tsx packages/core/src/cli-verify.ts",
     "dev": "npm run dev --workspace @ssente/reader",
     "build": "npm run build --workspace @ssente/reader",

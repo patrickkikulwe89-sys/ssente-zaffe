@@ -26,6 +26,13 @@ const NUM = String.raw`(?:-|\d[\d,]*)`;
 const TWO = new RegExp(`^(.*?)\\s+(${NUM})\\s+(${NUM})\\s*$`);
 const HEADER = /^(Local Government|VOTE:\s|Thousand Uganda Shillings|\(Ushs\.'000\)|\d{4}\/\d{2} (Approved|Draft) Budget|Recurrent Budget Estimates|Development Budget Estimates|Table V\d|Wage NonWage|[ivxlc]+$|\d{1,4}$)/;
 const MAX_WRAP = 6;
+/**
+ * A second, generous bound. MAX_WRAP is the real rule; this only stops a malformed or hostile
+ * document from growing one logical line without limit, which would feed the lazy-quantifier
+ * regex above an input long enough to matter. The longest genuine label in the FY2026/27
+ * document is 147 characters, so this cannot truncate real content.
+ */
+const MAX_JOINED = 600;
 
 const toThousands = (s: string): number => (s === '-' ? 0 : Number(s.replace(/,/g, '')));
 
@@ -78,7 +85,7 @@ function logicalRows(lines: [number, string][]) {
     const joined = buf ? `${buf} ${line}` : line;
     const m = joined.match(TWO);
     if (m) { out.push({ page: buf ? bufPage : page, label: m[1]!.trim(), a: toThousands(m[2]!), b: toThousands(m[3]!) }); buf = ''; wraps = 0; }
-    else if (wraps < MAX_WRAP) { if (!buf) bufPage = page; buf = joined; wraps++; }
+    else if (wraps < MAX_WRAP && joined.length <= MAX_JOINED) { if (!buf) bufPage = page; buf = joined; wraps++; }
     else { buf = ''; wraps = 0; }
   }
   return out;

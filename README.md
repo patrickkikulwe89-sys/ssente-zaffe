@@ -174,6 +174,14 @@ the published PDF by anyone who can reach it. USSD reports land in the same tabl
 reports, which still has nowhere to put a phone number — `phoneNumber` arrives on every
 request and is deliberately never read.
 
+## Security
+
+[`docs/security.md`](docs/security.md) is a review against the OWASP Top 10 (2021): seven
+findings fixed, the rest mapped, and the accepted risks stated. Highlights: no accounts and
+no backend for the reader, prepared statements only, a build-time CSP, origin and gateway
+allowlists, request-body ceilings, and a test that fails if an identifying column is ever
+added to the reports table.
+
 ## Submission
 
 [`SUBMISSION.md`](SUBMISSION.md) is the written summary. [`docs/demo-video.md`](docs/demo-video.md)

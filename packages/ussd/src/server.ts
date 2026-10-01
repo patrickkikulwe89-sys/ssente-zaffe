@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { verifyCard } from '../../core/src/sign.ts';
 import { openDb } from '../../reports/src/db.ts';
+import { limiter, readBody } from '../../reports/src/limit.ts';
 import { render, type Data, type Line, type Vote } from './menu.ts';
 import { PHONE_HTML } from './phone.ts';
 import { topicOf } from './topic.ts';
@@ -20,6 +21,17 @@ import { topicOf } from './topic.ts';
  */
 const BUNDLES = process.env.BUNDLE_DIR ?? 'apps/reader/public/bundles';
 
+/**
+ * Optional allowlist of gateway addresses. With a real shortcode every request arrives from
+ * the telco's gateway, and that is the only thing that should be able to reach this endpoint.
+ * Unset, the service accepts anyone, which is right for the simulated handset and wrong in
+ * production — so startup says which mode it is in.
+ */
+const ALLOW_IPS = (process.env.USSD_ALLOW_IPS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+const MAX_BODY = 8_000;           // form bodies are a few hundred bytes; this is generous
+const navLimit = limiter(600);    // one request per keypress, so navigation needs headroom
+const writeLimit = limiter(30);   // filing a verdict is the abuse vector, not browsing
+
 function loadData(): Data {
   const trusted = Object.fromEntries(Object.entries(
     JSON.parse(fs.readFileSync('keys/trusted.json', 'utf8')) as Record<string, { publicKey: string }>
@@ -35,6 +47,9 @@ function loadData(): Data {
     years: index.years,
     votes,
     linesFor(vote) {
+      // Defence in depth: vote codes only ever come from the index, but this value is
+      // interpolated into a file path, so it is checked rather than trusted.
+      if (!/^\d{3}$/.test(vote)) return [];
       const hit = cache.get(vote);
       if (hit) return hit;
       const body = JSON.parse(fs.readFileSync(path.join(BUNDLES, `${vote}.json`), 'utf8')) as { cards: unknown[] };
@@ -53,28 +68,54 @@ function loadData(): Data {
       return lines;
     },
     report(cardId, vote, verdict) {
+      if (!writeLimit(currentIp)) return false;
       try { store.insert(cardId, vote, verdict); return true; } catch { return false; }
     },
   };
 }
+
+/**
+ * The address of the caller currently being served, for write rate limiting. The menu is a
+ * pure function and must not learn about transports, so the request handler sets this
+ * immediately before rendering and the store callback reads it. Single-threaded Node makes
+ * that safe; it is never persisted.
+ */
+let currentIp = 'unknown';
 
 const data = loadData();
 const port = Number(process.env.PORT ?? 8788);
 
 createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
+  const ip = req.socket.remoteAddress ?? 'unknown';   // limiting only; never stored
+
+  if (ALLOW_IPS.length && !ALLOW_IPS.includes(ip)) {
+    res.writeHead(403, { 'content-type': 'text/plain' });
+    return res.end('forbidden');
+  }
+  if (!navLimit(ip)) {
+    res.writeHead(429, { 'content-type': 'text/plain' });
+    return res.end('END Too many requests. Please try again later.');
+  }
 
   if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.writeHead(200, {
+      'content-type': 'text/html; charset=utf-8',
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
+      'content-security-policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    });
     return res.end(PHONE_HTML);
   }
 
   if (req.method === 'POST' && (url.pathname === '/' || url.pathname === '/ussd')) {
-    let raw = '';
-    for await (const chunk of req) raw += chunk;
+    let raw: string;
+    try { raw = await readBody(req, MAX_BODY); }
+    catch { res.writeHead(413, { 'content-type': 'text/plain' }); res.end('END Request too large.'); return req.destroy(); }
     const form = new URLSearchParams(raw);
     // form.get('phoneNumber') exists and is intentionally not read.
     const text = form.get('text') ?? '';
+    currentIp = ip;
     const reply = render(text, data);
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'access-control-allow-origin': '*' });
     return res.end(reply.text);
@@ -87,4 +128,7 @@ createServer(async (req, res) => {
   console.log(`  open that address for a simulated feature phone (dial *384#)`);
   console.log(`  POST / with sessionId, phoneNumber, text  — Africa's Talking contract`);
   console.log(`  ${data.votes.length} local governments loaded from ${BUNDLES}`);
+  console.log(ALLOW_IPS.length
+    ? `  gateway allowlist: ${ALLOW_IPS.join(', ')}`
+    : '  gateway allowlist: OPEN — set USSD_ALLOW_IPS before exposing this publicly');
 });

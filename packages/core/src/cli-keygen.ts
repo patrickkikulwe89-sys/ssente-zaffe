@@ -13,6 +13,6 @@ if (fs.existsSync(secretPath)) {
 const { secretKey, publicKey, keyId } = generateKeypair();
 const issuer = process.argv[2] ?? 'Ssente Zaffe (development key)';
 fs.mkdirSync(dir, { recursive: true });
-fs.writeFileSync(secretPath, JSON.stringify({ keyId, issuer, secretKey: bytesToHex(secretKey) }, null, 2));
+fs.writeFileSync(secretPath, JSON.stringify({ keyId, issuer, secretKey: bytesToHex(secretKey) }, null, 2), { mode: 0o600 });
 fs.writeFileSync(path.join(dir, 'trusted.json'), JSON.stringify({ [keyId]: { issuer, publicKey: bytesToHex(publicKey) } }, null, 2));
 console.log(`issuer   ${issuer}\nkeyId    ${keyId}\nsecret   ${secretPath} (gitignored)\ntrusted  keys/trusted.json (commit this)`);

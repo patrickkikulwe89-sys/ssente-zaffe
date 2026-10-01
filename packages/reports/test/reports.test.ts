@@ -32,7 +32,7 @@ let dir: string, store: ReturnType<typeof openDb>, base: string, server: ReturnT
 before(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ssente-'));
   store = openDb(path.join(dir, 'test.db'));
-  server = createReportsServer({ store, trusted, perHour: 5 });
+  server = createReportsServer({ store, trusted, perHour: 100 });
   await new Promise<void>(r => server.listen(0, '127.0.0.1', r));
   base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 });
@@ -88,11 +88,49 @@ test('the stored time is a date, never a timestamp', () => {
 });
 
 test('rate limiting stops a flood without storing who flooded', async () => {
+  // Its own server: flooding the shared one would leave every later test rate-limited.
+  const tight = createReportsServer({ store, trusted, perHour: 3 });
+  await new Promise<void>(r => tight.listen(0, '127.0.0.1', r));
+  const port = (tight.address() as { port: number }).port;
   const signed = signCard(card(), issuer.secretKey);
-  let limited = false;
-  for (let i = 0; i < 10; i++) {
-    const r = await post({ signed, verdict: 'confirmed' });
-    if (r.status === 429) { limited = true; break; }
+  const codes: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    const r = await fetch(`http://127.0.0.1:${port}/reports`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ signed, verdict: 'confirmed' }),
+    });
+    codes.push(r.status);
   }
-  assert.ok(limited, 'expected a 429 within the limit window');
+  tight.close();
+  assert.ok(codes.includes(429), `expected a 429 within the window, got ${codes.join(',')}`);
+  const cols = (store.db.prepare("SELECT name FROM pragma_table_info('reports')").all() as { name: string }[]).map(c => c.name);
+  assert.ok(!cols.includes('ip'), 'limiting must not add a column recording who was limited');
+});
+
+// ---- hardening ----
+
+test('an oversized report body is refused', async () => {
+  const res = await fetch(`${base}/reports`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ signed: signCard(card(), issuer.secretKey), verdict: 'confirmed', pad: 'x'.repeat(70_000) }),
+  });
+  assert.equal(res.status, 413);
+});
+
+test('an unlisted browser origin receives no CORS grant', async () => {
+  const strict = createReportsServer({ store, trusted, allowedOrigins: ['https://example.org'] });
+  await new Promise<void>(r => strict.listen(0, '127.0.0.1', r));
+  const port = (strict.address() as { port: number }).port;
+  const denied = await fetch(`http://127.0.0.1:${port}/aggregate?vote=856`, { headers: { origin: 'https://evil.test' } });
+  const granted = await fetch(`http://127.0.0.1:${port}/aggregate?vote=856`, { headers: { origin: 'https://example.org' } });
+  strict.close();
+  assert.equal(denied.headers.get('access-control-allow-origin'), null);
+  assert.equal(granted.headers.get('access-control-allow-origin'), 'https://example.org');
+});
+
+test('responses carry no-sniff, no-referrer and no-store', async () => {
+  const res = await fetch(`${base}/aggregate?vote=856`);
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(res.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(res.headers.get('cache-control'), 'no-store');
 });

@@ -27,7 +27,7 @@ const id = keyId(publicKey);
 const label = ephemeral ? `${issuer} (ephemeral preview key)` : issuer;
 
 fs.mkdirSync('keys', { recursive: true });
-fs.writeFileSync('keys/issuer.secret.json', JSON.stringify({ keyId: id, issuer: label, secretKey: bytesToHex(secretKey) }));
+fs.writeFileSync('keys/issuer.secret.json', JSON.stringify({ keyId: id, issuer: label, secretKey: bytesToHex(secretKey) }), { mode: 0o600 });
 fs.writeFileSync('keys/trusted.json', JSON.stringify({ [id]: { issuer: label, publicKey: bytesToHex(publicKey) } }, null, 2));
 console.log(`${ephemeral ? '⚠ ephemeral' : 'stable'} signing key ${id} (${label})`);
 if (ephemeral) console.log('  cards from this build will not verify against other builds — set SSENTE_ISSUER_SECRET for a stable key');

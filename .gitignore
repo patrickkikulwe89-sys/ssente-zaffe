@@ -10,3 +10,8 @@ keys/*.secret.json
 apps/reader/public/bundles/
 .cache/
 content/cards/quarantine.json
+
+# citizen reports: never commit, even accidentally
+*.db
+*.db-wal
+*.db-shm
