@@ -163,8 +163,11 @@ Each of these cost real accuracy and is covered by a test. Do not reintroduce th
 `main`. `actions/configure-pages` with `enablement: true` creates the Pages site, and
 `BASE_PATH` comes from its `base_path` output rather than the repository name.
 
-Set the repository secret `SSENTE_ISSUER_SECRET` (64 hex characters) so builds sign with a
-stable key; without it `cli-key-from-env.ts` generates an ephemeral key and labels the build
+Set the repository secret `SSENTE_ISSUER_SECRET` (64 hex characters, from `secretKey` in
+`keys/issuer.secret.json`) so builds sign with a stable key. `normalise()` in
+`cli-key-from-env.ts` tolerates how people actually paste it — either case, stray whitespace,
+or the whole JSON file — but a value that is not a key fails the build loudly rather than
+silently falling back, because an unintended ephemeral key breaks every card already shared; without it `cli-key-from-env.ts` generates an ephemeral key and labels the build
 an *ephemeral preview*, which is correct behaviour — a fresh key per deploy would stop
 previously shared cards verifying. The optional repository variable `REPORTS_URL` points the
 reader at a reports service; left unset, the reader disables reporting and says so.

@@ -73,3 +73,23 @@ test('reading a body refuses to buffer past its ceiling and drops what follows',
   handlers.data!('y'.repeat(1_000_000));
   handlers.end!();
 });
+
+// ---- the signing secret is pasted by a person into a web form ----
+
+test('a pasted signing secret is accepted whatever shape it arrives in', async () => {
+  const { normalise } = await import('../src/cli-key-from-env.ts');
+  const key = 'a'.repeat(32) + 'b'.repeat(32);
+  const valid = (s: string) => /^[0-9a-f]{64}$/.test(normalise(s));
+  assert.ok(valid(key), 'plain');
+  assert.ok(valid(key.toUpperCase()), 'uppercase hex');
+  assert.ok(valid(`  ${key}\n`), 'surrounding whitespace');
+  assert.ok(valid(`${key.slice(0, 32)} ${key.slice(32)}`), 'a space in the middle');
+  assert.ok(valid(JSON.stringify({ keyId: 'x', issuer: 'y', secretKey: key })), 'the whole file pasted');
+  assert.equal(normalise(key.toUpperCase()), key, 'case is normalised, not just accepted');
+});
+
+test('a secret that is not a key is still rejected', async () => {
+  const { normalise } = await import('../src/cli-key-from-env.ts');
+  for (const bad of ['not-a-key', '', 'a'.repeat(63), 'z'.repeat(64), '{"nope":1}'])
+    assert.ok(!/^[0-9a-f]{64}$/.test(normalise(bad)), `should reject: ${bad.slice(0, 20)}`);
+});
