@@ -25,6 +25,24 @@ jobs:
           node-version: 22
           cache: npm
 
+      # enablement: true creates the Pages site if it does not exist, so deployment needs
+      # no manual repository setting. It also reports the subpath the site will be served
+      # from, which is safer than assuming it from the repository name.
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Resolve base path
+        id: base
+        run: |
+          BP='${{ steps.pages.outputs.base_path }}'
+          [ -z "$BP" ] && BP='/'
+          case "$BP" in */) ;; *) BP="$BP/" ;; esac
+          echo "path=$BP" >> "$GITHUB_OUTPUT"
+          echo "building for base path $BP"
+
       - run: npm ci
 
       # The budget PDFs are 21 MB and never change once published, so they are cached
@@ -50,7 +68,7 @@ jobs:
 
       - name: Build the reader
         env:
-          BASE_PATH: /${{ github.event.repository.name }}/
+          BASE_PATH: ${{ steps.base.outputs.path }}
           VITE_REPORTS_URL: ${{ vars.REPORTS_URL }}
         run: npm run build
 
