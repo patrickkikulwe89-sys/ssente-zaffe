@@ -49,16 +49,36 @@ const supplied = process.env.SSENTE_ISSUER_SECRET;
 const hex = supplied ? normalise(supplied) : '';
 const issuer = process.env.SSENTE_ISSUER ?? 'Ssente Zaffe';
 
+/** Public keys are also 64 hex characters, so this mistake would otherwise pass silently. */
+function isKnownPublicKey(candidate: string): boolean {
+  const trustedPath = path.join(KEYS, 'trusted.json');
+  if (!fs.existsSync(trustedPath)) return false;
+  try {
+    const t = JSON.parse(fs.readFileSync(trustedPath, 'utf8')) as Record<string, { publicKey?: string }>;
+    return Object.values(t).some(v => v.publicKey?.toLowerCase() === candidate);
+  } catch { return false; }
+}
+
 let secretKey: Uint8Array, ephemeral = false;
-if (hex && /^[0-9a-f]{64}$/.test(hex)) {
+if (hex && /^[0-9a-f]{64}$/.test(hex) && isKnownPublicKey(hex)) {
+  throw new Error('SSENTE_ISSUER_SECRET is a public key, not a secret key. Copy the "secretKey" field, not "publicKey".');
+} else if (hex && /^[0-9a-f]{64}$/.test(hex)) {
   secretKey = hexToBytes(hex);
 } else if (supplied && supplied.trim()) {
-  // Never print the value. Say enough to fix it and no more.
-  throw new Error(
-    `SSENTE_ISSUER_SECRET is not a valid signing key: expected 64 hex characters, ` +
-    `got ${hex.length} usable character${hex.length === 1 ? '' : 's'} after trimming. ` +
-    `Copy the "secretKey" value from keys/issuer.secret.json exactly.`,
-  );
+  // Never print the value. Report its shape, enough to fix it and no more.
+  const shape = /^[0-9a-f]*$/.test(hex) ? `${hex.length} hex characters` : `${hex.length} characters, not all hexadecimal`;
+  const lines = [
+    `SSENTE_ISSUER_SECRET is not a valid signing key.`,
+    `  expected: 64 hexadecimal characters`,
+    `  received: ${shape}`,
+    hex.length === 16 ? `  that length matches a keyId — you may have copied "keyId" instead of "secretKey".` : '',
+    `  fix: copy the "secretKey" value out of keys/issuer.secret.json, or delete the`,
+    `       repository secret entirely to build with an ephemeral preview key instead.`,
+  ].filter(Boolean);
+  // Surface it on the job summary page, so the reason is visible without opening the log.
+  const summary = process.env.GITHUB_STEP_SUMMARY;
+  if (summary) { try { fs.appendFileSync(summary, `### Signing key rejected\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n`); } catch { /* best effort */ } }
+  throw new Error(lines.join('\n'));
 } else {
   ({ secretKey } = generateKeypair());
   ephemeral = true;

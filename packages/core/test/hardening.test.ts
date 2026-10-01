@@ -93,3 +93,11 @@ test('a secret that is not a key is still rejected', async () => {
   for (const bad of ['not-a-key', '', 'a'.repeat(63), 'z'.repeat(64), '{"nope":1}'])
     assert.ok(!/^[0-9a-f]{64}$/.test(normalise(bad)), `should reject: ${bad.slice(0, 20)}`);
 });
+
+test('a keyId or a public key is not mistaken for a secret key', async () => {
+  const { normalise } = await import('../src/cli-key-from-env.ts');
+  // A keyId is 16 hex characters; a public key is 64, exactly like a secret key, which is
+  // why the CLI compares it against the trust list rather than only checking the shape.
+  assert.ok(!/^[0-9a-f]{64}$/.test(normalise('398a95cbf44222e4')), 'a keyId must not validate');
+  assert.ok(/^[0-9a-f]{64}$/.test(normalise('b'.repeat(64))), 'shape alone cannot tell them apart');
+});
