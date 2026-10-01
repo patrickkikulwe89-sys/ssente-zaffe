@@ -174,6 +174,11 @@ the published PDF by anyone who can reach it. USSD reports land in the same tabl
 reports, which still has nowhere to put a phone number — `phoneNumber` arrives on every
 request and is deliberately never read.
 
+## Submission
+
+[`SUBMISSION.md`](SUBMISSION.md) is the written summary. [`docs/demo-video.md`](docs/demo-video.md)
+is the shooting script for the demo video.
+
 ## Deploying
 
 The reader is a static site with no backend, so it deploys as files. `.github/workflows/deploy.yml`
