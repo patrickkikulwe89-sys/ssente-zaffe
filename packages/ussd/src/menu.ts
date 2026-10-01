@@ -19,8 +19,13 @@
  */
 
 export const SCREEN_LIMIT = 182;
-export type Vote = { vote: string; name: string; level: string };
-export type Line = { id: string; topic: string; item: string; a: number; b: number; page: number; claim: string };
+export type Vote = { vote: string; name: string; level: string; aliases?: string[] };
+export type Line = {
+  id: string; topic: string; item: string; a: number; b: number; page: number; claim: string;
+  /** The department or programme the line sits under. Two lines in one sector can share an
+   *  item name and differ only by this, so it is what disambiguates the menu. */
+  unit?: string;
+};
 export type Data = {
   years: { a: string; b: string };
   votes: Vote[];
@@ -160,6 +165,27 @@ export function collapseBacks(parts: string[]): string[] {
 /** Lines a citizen is most likely to care about first: biggest movements, then biggest sums. */
 const rank = (l: Line) => Math.abs(l.b - l.a) * (l.a === 0 || l.b === 0 ? 2 : 1);
 
+/**
+ * Labels for a list of budget lines, guaranteed distinguishable.
+ *
+ * Shortening alone is not enough: a central vote can hold the same department under two
+ * programmes ("Public Health and Environment" twice), and two identical menu entries are
+ * worse than useless on a phone with no scrollback. Where that happens, the programme is
+ * what tells them apart, so a short piece of it is appended.
+ */
+export function menuLabels(lines: Line[]): string[] {
+  const base = lines.map(l => label(l.item, 24));
+  const seen = new Map<string, number>();
+  for (const b of base) seen.set(b, (seen.get(b) ?? 0) + 1);
+  return lines.map((l, i) => {
+    const b = base[i]!;
+    const money = `: ${short(l.b)}`;
+    if ((seen.get(b) ?? 0) < 2 || !l.unit) return `${b}${money}`;
+    const hint = label(l.unit, 12);
+    return `${label(l.item, 14)} (${hint})${money}`;
+  });
+}
+
 export function render(raw: string, d: Data): Reply {
   const parts = collapseBacks((raw ?? '').split('*').filter(s => s !== ''));
 
@@ -188,7 +214,11 @@ export function render(raw: string, d: Data): Reply {
   if (!query) return screen('Enter the first letters of your district, city or municipality:');
   if (/^\d+$/.test(query)) return screen('Please type letters, not numbers, for the district name. Dial again.', true);
 
-  const matches = d.votes.filter(v => v.name.toLowerCase().startsWith(query.toLowerCase()));
+  // Match the vote's own name or any place named inside it. Typing "kawempe" has to reach
+  // KCCA; nothing in "Kampala Capital City Authority" would get you there.
+  const needle = query.toLowerCase();
+  const matches = d.votes.filter(v =>
+    v.name.toLowerCase().startsWith(needle) || (v.aliases ?? []).some(a => a.toLowerCase().startsWith(needle)));
   if (matches.length === 0) return screen(`No local government starts with "${query}". Dial again to retry.`, true);
 
   // Walk the remaining digits: district pick, sector pick, line pick, verdict.
@@ -197,7 +227,8 @@ export function render(raw: string, d: Data): Reply {
   let chosen: Vote;
   if (matches.length === 1) chosen = matches[0]!;
   else {
-    const r = select(digits, matches, matches.map(m => m.name), `${matches.length} matches:`);
+    const labelFor = (m: Vote) => (m.aliases ?? []).find(a => a.toLowerCase().startsWith(needle)) ?? m.name;
+    const r = select(digits, matches, matches.map(labelFor), `${matches.length} matches:`);
     if ('reply' in r) return r.reply;
     chosen = r.chosen; digits = r.rest;
   }
@@ -213,7 +244,7 @@ export function render(raw: string, d: Data): Reply {
 
   const inTopic = lines.filter(l => l.topic === topic).sort((x, y) => rank(y) - rank(x));
   const head = `${chosen.name} - ${topic}`;
-  const rl = select(digits, inTopic, inTopic.map(l => `${label(l.item, 24)}: ${short(l.b)}`), head);
+  const rl = select(digits, inTopic, menuLabels(inTopic), head);
   if ('reply' in rl) return rl.reply;
   const line = rl.chosen; digits = rl.rest;
 

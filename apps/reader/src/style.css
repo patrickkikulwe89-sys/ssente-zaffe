@@ -97,3 +97,7 @@ textarea { width: 100%; padding: .6rem; border: 2px solid var(--line); border-ra
 .rmine { margin: .2rem 0; font-size: .88rem; color: var(--muted); }
 .rprivacy { margin: .4rem 0 0; font-size: .76rem; color: var(--muted); }
 .queued { font-size: .86rem; color: var(--warn); border-left: 3px solid var(--warn); padding-left: .6rem; }
+
+.funding { margin: .1rem 0 .6rem; font-size: .9rem; color: var(--muted);
+  border-left: 3px solid var(--accent); padding-left: .55rem; }
+.funding strong { color: var(--fg); font-weight: 600; }

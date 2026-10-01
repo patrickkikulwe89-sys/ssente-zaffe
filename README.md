@@ -29,28 +29,52 @@ Three consequences run through the whole codebase:
 
 ## Data
 
-Source: **Ministry of Finance, Planning and Economic Development** — *Draft Estimates of
-Revenue and Expenditure, Volume II: Local Government Votes*, FY2025/26 and FY2026/27.
-Registered with URL and SHA-256 in [`content/sources/sources.json`](content/sources/sources.json);
-ingest refuses to run if a document's hash does not match.
+Sources: **Ministry of Finance, Planning and Economic Development** — *Draft Estimates of
+Revenue and Expenditure*, **Volume II: Local Government Votes** (FY2025/26 and FY2026/27) and
+**Volume 1: Central Government Votes** (FY2026/27). Each is registered with its URL and
+SHA-256 in [`content/sources/sources.json`](content/sources/sources.json); ingest refuses to
+run if a hash does not match.
 
-Current run, FY2026/27 (1,476 pages):
+The two volumes have entirely different table grammars and so have separate parsers, each
+behind the same reconciliation gate.
 
-| | |
-|---|---|
-| Local government votes | **176** — 10 cities, 31 municipal councils, 135 districts |
-| Line items extracted | **9,617** |
-| Grant groups audited | 4,152 |
-| Reconciliation | **100.00%** (3,272 exact, 880 within the document's own thousand-shilling rounding) |
-| Quarantined | **0** |
-| Signed cards | 9,617 across 176 bundles |
-| Median bundle | 74.6 KB raw, **12 KB gzipped** |
+| | Volume II — local | Volume 1 — central |
+|---|---|---|
+| Pages | 1,476 | 1,442 |
+| Votes | **176** — 135 districts, 31 municipal councils, 10 cities | **152** ministries, agencies and commissions |
+| Rows extracted | 9,617 named service areas | 639 programme × department |
+| Groups audited | 4,152 grant groups | 400 programme groups |
+| Reconciliation | **100.00%** | **100.00%** |
+| Quarantined | **0** | **0** |
+| Granularity | vote → department/project → grant → named service area | vote → programme → department or division |
 
-The same parser reconciles the FY2025/26 document at 100.00% without modification.
+**328 bundles, 10,256 signed cards, UGX 83.96 trillion of budget made readable.** Median
+bundle 60 KB raw / ~10 KB gzipped; the district index is 42 KB raw, **6 KB gzipped**.
 
-Finest available granularity is **vote → department or project → grant → named service area**.
-Parish-level line items are *not* published in these documents — only parish aggregates — so
-this project makes district-level claims and does not imply parish figures it cannot cite.
+The same Volume II parser reconciles the FY2025/26 document at 100.00% without modification.
+
+### Kampala
+
+Kampala is not a local government. It is **Vote 122, Kampala Capital City Authority**, a
+central government vote — which is why Volume 1 matters. Better still, KCCA's budget is broken
+down by its **five divisions**: Kampala Central, Kawempe, Lubaga, Makindye and Nakawa. That is
+finer than district level, so a Kawempe resident gets figures for where they actually live,
+and searching "Kawempe" finds them on both the web reader and the feature phone.
+
+KCCA: 49 cards, UGX 874.4bn for FY2026/27 — which matches the *Grand Total Vote* the document
+states for itself, an independent confirmation that the rows add up.
+
+Volume 1 also publishes something Volume II does not: the split between government funds and
+external (donor) financing. A road budget that is mostly donor money is a different promise
+from one the treasury funds, so the split is carried on the card and shown to the reader.
+
+**Coarser, though.** Volume 1's reconcilable table is a summary, so a ministry gets around
+four cards against a district's fifty. Its item-level table is not published here; see
+*Known limits*.
+
+Parish-level line items are not published in either volume — only parish aggregates — so this
+project makes district- and division-level claims and does not imply parish figures it cannot
+cite.
 
 ## Quick start
 

@@ -1,13 +1,40 @@
 import { verifyCard } from '@core/sign.ts';
 import type { Card } from '@core/card.ts';
 
-export type VoteRef = { vote: string; name: string; level: string; cards: number; bytes: number };
+export type VoteRef = {
+  vote: string; name: string; level: string; cards: number; bytes: number;
+  /** Places named inside a central vote. "Kawempe" has to find KCCA, and nothing in the
+   *  vote's own name would do that. */
+  aliases?: string[];
+};
 export type Index = {
   issuer: string; keyId: string; created: string;
-  source: { docId: string; title: string; publisher: string; url: string; sha256: string };
-  years: { a: string; b: string; aKind: string; bKind: string };
+  sources: { docId: string; title: string; publisher: string; url: string; sha256: string; volume: string }[];
+  years: { a: string; b: string };
   votes: VoteRef[];
 };
+
+export const LEVEL_LABEL: Record<string, string> = {
+  district: 'district', city: 'city', municipality: 'municipal council',
+  central: 'central government vote',
+};
+
+/** Search over a vote's own name and any place named inside it. */
+export function search(votes: VoteRef[], q: string): { vote: VoteRef; via?: string }[] {
+  const n = q.trim().toLowerCase();
+  if (!n) return [];
+  const out: { vote: VoteRef; via?: string }[] = [];
+  for (const v of votes) {
+    if (v.name.toLowerCase().includes(n)) { out.push({ vote: v }); continue; }
+    const via = v.aliases?.find(a => a.toLowerCase().includes(n));
+    if (via) out.push({ vote: v, via });
+  }
+  // A place match is usually what someone typing a division name wants; after that, a vote
+  // whose own name begins with the query beats one that merely contains it somewhere.
+  const score = (x: { vote: VoteRef; via?: string }) =>
+    (x.via ? 0 : 1) + (x.vote.name.toLowerCase().startsWith(n) ? 0 : 1);
+  return out.sort((a, b) => score(a) - score(b) || a.vote.name.length - b.vote.name.length).slice(0, 12);
+}
 
 /** keyId -> public key hex, compiled into the bundle so verification needs no network. */
 export const TRUSTED: Record<string, string> =

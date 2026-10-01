@@ -187,3 +187,55 @@ test('a district whose bundle cannot be read says so instead of breaking', () =>
   assert.match(r.text, /temporarily unavailable/);
   assert.ok(r.text.replace(/^END /, '').length <= SCREEN_LIMIT);
 });
+
+// ---- central government votes, which is how Kampala is reached ----
+
+const kampala: Data = {
+  years: { a: '2025/26', b: '2026/27' },
+  votes: [{
+    vote: '122', name: 'Kampala Capital City Authority (KCCA)', level: 'central',
+    aliases: ['Kampala Central Division', 'Kawempe Division', 'Lubaga Division', 'Makindye Division', 'Nakawa Division'],
+  }],
+  linesFor: () => [
+    line('1111', 'water', 'Kawempe Division', 2_978_149_000, 2_858_415_000, 438),
+    line('2222', 'roads', 'Engineering and Technical services', 466_509_046_000, 489_636_557_000, 438),
+    line('3333', 'education', 'Education and Social Services', 67_529_932_000, 75_998_230_000, 439),
+  ],
+  report: () => true,
+};
+
+test('typing a division name reaches the central vote that holds it', () => {
+  const r = render('1*kawempe', kampala);
+  assert.doesNotMatch(r.text, /No local government/);
+  assert.match(r.text, /Choose a sector|Kampala Capital City/);
+});
+
+test('a division match is shown by the name that was typed, not only the vote name', () => {
+  const two: Data = { ...kampala, votes: [kampala.votes[0]!, { vote: '999', name: 'Kawempe Test District', level: 'district' }] };
+  const r = render('1*kawempe', two);
+  assert.match(r.text, /Kawempe Division/);
+  assert.ok(r.text.replace(/^CON /, '').length <= SCREEN_LIMIT);
+});
+
+test('central vote screens still fit a feature phone', () => {
+  for (const input of ['1*kawempe', '1*kawempe*1', '1*kawempe*1*1', '1*kampala']) {
+    const r = render(input, kampala);
+    assert.ok(r.text.replace(/^(CON|END) /, '').length <= SCREEN_LIMIT, `${input}: ${r.text.length}`);
+  }
+});
+
+test('two lines sharing a department name are disambiguated by programme', () => {
+  const dup: Data = {
+    ...kampala,
+    linesFor: () => [
+      { ...line('a1', 'health', 'Public Health and Environment', 8_074_019_000, 17_896_690_000, 438), unit: 'Natural Resources, Environment, Climate Change' },
+      { ...line('a2', 'health', 'Public Health and Environment', 14_708_675_000, 15_463_744_000, 439), unit: 'Human Capital Development' },
+    ],
+  };
+  const r = render('1*kawempe*1', dup);
+  // 9 is More and 0 is Back; they are navigation, not budget lines.
+  const entries = r.text.split('\n').filter(l => /^[1-8]\. /.test(l)).map(l => l.replace(/^\d\. /, ''));
+  assert.equal(entries.length, 2);
+  assert.equal(new Set(entries).size, 2, `menu entries are identical:\n${entries.join('\n')}`);
+  assert.ok(r.text.replace(/^CON /, '').length <= SCREEN_LIMIT);
+});

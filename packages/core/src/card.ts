@@ -38,7 +38,7 @@ export const Card = z.object({
     country: z.literal('UG'),
     voteCode: z.string().regex(/^\d{3}$/),
     voteName: z.string().min(1),
-    level: z.enum(['district', 'city', 'municipality']),
+    level: z.enum(['district', 'city', 'municipality', 'central']),
   }),
   topic: z.enum(['health', 'education', 'water', 'roads', 'administration', 'production', 'other']),
   unit: z.string().min(1),            // department or project the money sits in
@@ -46,6 +46,13 @@ export const Card = z.object({
   claim: z.string().min(1).max(400),  // one plain-language sentence
   amounts: z.array(Amount).min(1),
   change: z.object({ from: z.string(), to: z.string(), pct: z.number().int().nullable() }).optional(),
+  /**
+   * Government funds versus external (donor) financing for the latest year. Volume 1 publishes
+   * this split and it changes how a figure should be read — a road budget that is mostly donor
+   * money is a different promise from one the treasury funds — so it is carried and signed.
+   * Volume II does not publish it, so local government cards omit the field.
+   */
+  funding: z.object({ gou: z.number().int().nonnegative(), external: z.number().int().nonnegative() }).optional(),
   source: Source,
   provenance: Provenance,
   issued: z.string().datetime(),

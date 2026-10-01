@@ -45,9 +45,9 @@ function loadData(): Data {
     JSON.parse(fs.readFileSync(TRUSTED_KEYS, 'utf8')) as Record<string, { publicKey: string }>
   ).map(([k, v]) => [k, v.publicKey]));
   const index = JSON.parse(fs.readFileSync(path.join(BUNDLES, 'index.json'), 'utf8')) as {
-    years: { a: string; b: string }; votes: { vote: string; name: string; level: string }[];
+    years: { a: string; b: string }; votes: { vote: string; name: string; level: string; aliases?: string[] }[];
   };
-  const votes: Vote[] = index.votes.map(v => ({ vote: v.vote, name: v.name, level: v.level }));
+  const votes: Vote[] = index.votes.map(v => ({ vote: v.vote, name: v.name, level: v.level, aliases: v.aliases }));
   const cache = new Map<string, Line[]>();
   const store = openDb(process.env.REPORTS_DB ?? path.join(ROOT, 'reports.db'));
 
@@ -78,7 +78,7 @@ function loadData(): Data {
         if (!r.ok) continue;
         const c = r.card;
         lines.push({
-          id: c.id, topic: topicOf(c.topic), item: c.item, page: c.source.page, claim: c.claim,
+          id: c.id, topic: topicOf(c.topic), item: c.item, unit: c.unit, page: c.source.page, claim: c.claim,
           a: c.amounts[0]?.ugx ?? 0, b: c.amounts[1]?.ugx ?? 0,
         });
       }

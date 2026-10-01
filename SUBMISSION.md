@@ -47,11 +47,13 @@ sentence or translate it, and the signature covers whatever is published.
 **Arithmetic gates publication.** The source document states a total for every grant line
 and then itemises it. Every group is re-added and compared. A group that does not balance
 is quarantined and never signed, so a parsing bug cannot reach a citizen dressed as a fact.
-Current run: **4,152 groups, 100.00% reconciled, 0 quarantined** — and the previous fiscal
-year's document reconciles at 100.00% through the same parser, unmodified.
+Current run across both volumes: **4,552 groups, 100.00% reconciled, 0 quarantined** — and
+the previous fiscal year's local-government document reconciles at 100.00% through the same
+parser, unmodified. Volume 1 adds a second, independent check, because it publishes the
+funding split: government funds plus external financing must equal the total on every row.
 
-**One bundle per district.** You download your own district — about 12 KB compressed — not
-the country.
+**One bundle per vote.** You download your own district, division or ministry — about 10 KB
+compressed — not the country.
 
 The loop closes with reporting. Each card asks *did it reach you?* with four answers.
 Answers queue on the phone and send themselves when a connection returns. A report may only
@@ -70,7 +72,7 @@ unsigned observations and the interface never lets them look like verified figur
 | Accessibility | Large type, semantic markup, screen-reader-clean, system fonts, light and dark |
 | Feature phones | USSD on the real gateway protocol, 182 characters a screen, every reachable screen length-tested |
 | Privacy | No accounts, no analytics, nothing identifying stored; `phoneNumber` arrives at the gateway and is never read |
-| Local relevance | 176 Ugandan local governments, real documents, citeable page numbers |
+| Local relevance | 328 Ugandan votes — every district, city and municipality, plus central government and Kampala's five divisions — real documents, citeable page numbers |
 | Multilingual | Card schema carries a language; English shipped, Luganda next, figures never re-typed |
 
 ## What the data already shows
@@ -84,15 +86,19 @@ Produced by the pipeline, each citing its page:
   appearing as "new" for the same roads.
 - **131 health line items** unchanged across two years, **UGX 266.7bn** of frozen health budget.
 - **Moroto Municipal Council** — **UGX 35.5m** of non-wage primary health care for a year.
+- **Kampala**, via Vote 122: UGX 489.6bn for KCCA's Engineering and Technical services, of
+  which **UGX 221.3bn is donor money** — 45% of a headline road figure is external financing.
 
 ## Honest limits
 
-- **Kampala is not covered.** KCCA is Vote 122, a central government vote published in
-  Volume I, not a local government. Its road rehabilitation grant alone is UGX 508.8bn,
-  more than four times the largest district here. Greater Kampala outside KCCA boundaries —
-  Wakiso, Nansana, Kira, Makindye-Ssabagabo, Entebbe, Mukono — is included.
-- **Parish figures are not published** in this volume, only parish aggregates. District,
-  department and named service area is the finest grain, and we do not imply otherwise.
+- **Central government is covered more coarsely than local government.** Volume 1's
+  reconcilable table is a summary, so a ministry gets about four cards where a district gets
+  fifty. Its item-level table — expenditure by staff training, travel, fuel, maintenance,
+  some 3,000 rows — does not reconcile against the total the document states for each vote
+  (rows sum to a median 83% of it, and arrears do not explain the gap), so it is withheld
+  rather than published unverified.
+- **Parish figures are not published** in either volume, only parish aggregates. District
+  and division is the finest grain, and we do not imply otherwise.
 - **A feature phone cannot verify a signature.** On USSD the gateway verifies and the caller
   trusts the operator. Every screen names the source page so the claim stays checkable.
 - **This is a proof of concept.** Figures are reconciled and citeable, but the cards are
@@ -104,9 +110,8 @@ The deliverable is not an app but a content standard with reference clients. Any
 office, NGO or radio station could publish signed cards tomorrow and reach people through
 channels nobody built for them — because the trust travels inside the content.
 
-The clearest next step is one document away: ingesting *Volume I: Central Government Votes*
-adds KCCA and every ministry and agency, a far larger accountability surface than all 176
-local governments combined, behind the same reconciliation gate. After that: Luganda,
-publisher keys so institutions sign their own cards, and the quarterly performance reports
-on the same portal, which would put **budgeted, released and spent** side by side — each
-citing its page.
+Volume 1 is now ingested, which brought in Kampala and every ministry — UGX 77.1tn of central
+government beside UGX 6.8tn of local government. The next steps are finding a sound audit
+anchor for Volume 1's item-level table, Luganda, publisher keys so institutions sign their own
+cards, and the quarterly performance reports on the same portal, which would put **budgeted,
+released and spent** side by side — each citing its page.

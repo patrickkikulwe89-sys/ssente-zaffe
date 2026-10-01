@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { fetchIndex, loadVote, checkPasted, ugx, ISSUERS, type Checked, type Index, type VoteRef } from './store.ts';
+import { fetchIndex, loadVote, checkPasted, search, ugx, ISSUERS, LEVEL_LABEL, type Checked, type Index, type VoteRef } from './store.ts';
 import type { Card } from '@core/card.ts';
 import { VERDICT_LABEL, queueReport, flushQueue, fetchCounts, myVerdicts, pendingCount, REPORTING_ENABLED, type Counts } from './reports.ts';
 import type { Verdict } from '../../../packages/reports/src/db.ts';
@@ -97,6 +97,13 @@ function CardView({ c, counts, onReport }: {
           <div key={a.fy}><dt>FY{a.fy} <small>{a.kind}</small></dt><dd>{ugx(a.ugx)}</dd></div>
         ))}
       </dl>
+      {card.funding && card.funding.external > 0 && (
+        <p class="funding">
+          Of this, <strong>{ugx(card.funding.gou)}</strong> is government money and{' '}
+          <strong>{ugx(card.funding.external)}</strong> is external financing
+          {' '}({Math.round((card.funding.external / (card.funding.gou + card.funding.external)) * 100)}% donor-funded).
+        </p>
+      )}
       <div class="actions">
         <button onClick={() => setOpen(!open)} aria-expanded={open}>{open ? 'Hide source' : 'Where this came from'}</button>
         <button onClick={share}>{copied ? 'Copied ✓' : 'Share this card'}</button>
@@ -157,12 +164,7 @@ export function App() {
     });
   }, [online, vote?.vote]);
 
-  const matches = useMemo(() => {
-    if (!index) return [];
-    const needle = q.trim().toLowerCase();
-    if (!needle) return [];
-    return index.votes.filter(v => v.name.toLowerCase().includes(needle)).slice(0, 12);
-  }, [index, q]);
+  const matches = useMemo(() => (index ? search(index.votes, q) : []), [index, q]);
 
   const open = async (v: VoteRef) => {
     setVote(v); setCards(null); setTopic('all');
@@ -209,14 +211,16 @@ export function App() {
           </p>
           <label class="sr" for="q">Find your district, city or municipality</label>
           <input id="q" class="search" value={q} onInput={e => setQ((e.target as HTMLInputElement).value)}
-                 placeholder="Type your district — Wakiso, Kasese, Gulu…" autocomplete="off" />
-          {index && !q && <p class="hint">{index.votes.length} local governments · FY{index.years.a} compared with FY{index.years.b}</p>}
+                 placeholder="Type a place or a ministry — Wakiso, Kawempe, Health…" autocomplete="off" />
+          {index && !q && <p class="hint">{index.votes.length} votes — every district, city and municipality, plus central government including Kampala · FY{index.years.a} compared with FY{index.years.b}</p>}
           <ul class="hits">
-            {matches.map(v => (
+            {matches.map(({ vote: v, via }) => (
               <li key={v.vote}>
                 <button onClick={() => open(v)}>
-                  <strong>{v.name}</strong>
-                  <span class="meta">{v.level} · {v.cards} budget lines · {Math.round(v.bytes / 1024)} KB</span>
+                  <strong>{via ?? v.name}</strong>
+                  <span class="meta">
+                    {via ? `in ${v.name} · ` : ''}{LEVEL_LABEL[v.level] ?? v.level} · {v.cards} budget lines · {Math.round(v.bytes / 1024)} KB
+                  </span>
                 </button>
               </li>
             ))}
@@ -225,7 +229,7 @@ export function App() {
           <CheckPanel />
           {index && (
             <footer class="src">
-              Source: {index.source.title} — {index.source.publisher}.
+              Sources: {index.sources.map(s => s.title).join('; ')} — {index.sources[0]?.publisher}.
               {' '}Signed by {index.issuer}.
             </footer>
           )}

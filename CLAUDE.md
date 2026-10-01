@@ -62,9 +62,12 @@ manifests only name the package, and cross-package imports are relative paths
   `canonicalize()` is the linchpin: signatures only mean anything if two machines serialise a
   card to identical bytes, so it sorts keys recursively, emits no incidental whitespace, and
   throws on fractional numbers. Money is whole UGX integers everywhere.
-- **`packages/ingest`** — `lg-estimates.ts` parses the MoFPED "Volume II: Local Government
-  Votes" PDF text; `reconcile.ts` is the publication gate; `cards.ts` renders claim sentences
-  from templates; `cli-ingest.ts` wires it together and writes one signed bundle per vote.
+- **`packages/ingest`** — two parsers for two documents with unrelated grammars:
+  `lg-estimates.ts` for Volume II (local governments, vote codes 601-999) and
+  `cg-estimates.ts` for Volume 1 (central government, 001-538, **which is where Kampala
+  lives** — Vote 122, KCCA, broken down by its five divisions). Vote-code ranges are disjoint,
+  so a bundle is still `<vote>.json`. `reconcile.ts` and `reconcile-cg.ts` are the publication
+  gates; `cards.ts` renders claim sentences from templates; `cli-ingest.ts` runs both.
 - **`packages/reports`** — one HTTP file and one SQLite table for anonymous citizen verdicts.
 - **`packages/ussd`** — `menu.ts` is a **pure function** of the gateway's accumulated input
   string; `server.ts` speaks the Africa's Talking contract and serves a simulated handset
@@ -74,6 +77,13 @@ manifests only name the package, and cross-package imports are relative paths
 
 Data flow: pinned PDF → deterministic parse → reconciliation gate → per-card Ed25519
 signature + bundle manifest → static JSON → verified in the browser or at the USSD gateway.
+
+Volume 1 differs in three ways worth knowing before touching `cg-estimates.ts`: rows carry
+**six** figures (government funds, external financing, total — for each of two years, giving a
+second free audit, `gou + external = total`); Table V1 is discriminated from the
+confusingly similar Table V2 by the **colon** after `Programme` and by 2-digit rather than
+3-digit row codes; and table captions sit asymmetrically in the text stream — V1's appears
+*after* its first rows, so its region opens at the vote boundary rather than at its caption.
 
 ## Invariants — breaking these breaks the product
 
@@ -100,7 +110,11 @@ signature + bundle manifest → static JSON → verified in the browser or at th
    refusal says why. Do not silently hide it.
 8. **Source text is preserved verbatim**, typos included (e.g. `"cf Ground Floor"` is in the
    government document). Cite, do not quietly edit.
-9. **The signing secret never enters the repo.** `keys/*.secret.json` is gitignored;
+9. **A table without a sound audit anchor is not published.** Volume 1's Table V5 (expenditure
+   by item, ~3,000 rows) is deliberately parsed but **not turned into cards**: its rows sum to
+   a median 83% of the stated `Grand Total Vote`, ranging 21–100%, and arrears do not explain
+   the gap. Do not ship it to make ministries look richer — find the anchor first.
+10. **The signing secret never enters the repo.** `keys/*.secret.json` is gitignored;
    `keys/trusted.json` holds only public keys and is committed.
 
 ## The source document's grammar, and defects already fixed
@@ -134,6 +148,12 @@ Each of these cost real accuracy and is covered by a test. Do not reintroduce th
   degrade to an empty list, the menu says the district is temporarily unavailable, and the
   request handler always returns a screen. Only surfaced by running the container against
   incomplete data — local runs always had all 176 files.
+- **Duplicate menu entries came back with central votes.** A central vote can hold the same
+  department under two programmes ("Public Health and Environment" twice), so item-only labels
+  collided again. `menuLabels()` appends a short programme hint **only** where a label would
+  otherwise repeat. Expect this class of bug whenever a new document shape arrives, and note
+  the earlier distinguishability test passed throughout because it only ran on a
+  local-government fixture.
 - **USSD screens are hard-limited to 182 characters.** A test crawls every reachable screen
   and fails if any one exceeds it; averages are useless here.
 
@@ -171,10 +191,11 @@ server, or every later test against the shared one gets `429`.
 
 ## Known limits — do not claim otherwise
 
-- **Kampala is absent.** KCCA is Vote 122, a *central government* vote in Volume I; Volume II
-  covers vote codes 601–999 only. Greater Kampala outside KCCA (Wakiso, Nansana, Kira,
-  Makindye-Ssabagabo, Entebbe, Mukono) is covered. Ingesting Volume I is the clearest next
-  step and needs a second parser behind the same gate.
-- **Parish-level figures are not published** in this volume, only parish aggregates.
+- **Kampala is covered**, via Vote 122 (KCCA) and its five divisions. Searching a division name
+  works on both channels because `index.json` carries `aliases` per vote — nothing in
+  "Kampala Capital City Authority" would match "Kawempe".
+- **Central votes are coarser than local ones**: ~4 cards per ministry against ~55 per
+  district, because only Volume 1's summary table reconciles. See invariant 9.
+- **Parish-level figures are not published** in either volume, only parish aggregates.
 - **A feature phone cannot verify a signature.** On USSD the gateway verifies and the caller
   trusts the operator; every screen names the source page so the claim stays checkable.

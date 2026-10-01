@@ -8,7 +8,8 @@
       "cache": "lg2627.pdf",
       "bytes": 10740372,
       "sha256": "430e52786f8814d2ce985f70d178dd772592e58c09b67f5d3b6a6447ff836cbe",
-      "retrieved": "2026-09-29T00:00:00.000Z"
+      "retrieved": "2026-09-29T00:00:00.000Z",
+      "volume": "local"
     },
     {
       "docId": "ug-mofped-lg-estimates-2025-26",
@@ -18,7 +19,19 @@
       "cache": "lg2526.pdf",
       "bytes": 10222352,
       "sha256": "87b7afdf678ffeaa2c3ff7ae67cea5978843e15a611bad18226627a20430d653",
-      "retrieved": "2026-09-29T00:00:00.000Z"
+      "retrieved": "2026-09-29T00:00:00.000Z",
+      "volume": "local"
+    },
+    {
+      "docId": "ug-mofped-cg-estimates-2026-27",
+      "title": "Draft Estimates of Revenue and Expenditure FY 2026/27, Volume 1: Central Government Votes",
+      "publisher": "Ministry of Finance, Planning and Economic Development, Uganda",
+      "url": "https://budget.finance.go.ug/sites/default/files/National%20Budget%20docs/Draft%20Budget%20Estimates%20for%20Central%20Governments%20Vol.%201%20FY%202026-27.pdf",
+      "cache": "cg2627.pdf",
+      "bytes": 8730280,
+      "sha256": "3ac10587bd7d2644d3c3db76b83e73c1f4dfe4c6776df85596a3944975c6b5eb",
+      "retrieved": "2026-10-02T00:00:00.000Z",
+      "volume": "central"
     }
   ]
 }
