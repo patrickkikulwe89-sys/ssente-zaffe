@@ -124,8 +124,14 @@ for (const [vote, cards] of [...byVote].sort(([a], [b]) => (a < b ? -1 : 1))) {
   const alias = [...(aliases.get(vote) ?? [])].sort();
   index.push({ vote, name: cards[0]!.scope.voteName, level: cards[0]!.scope.level, cards: cards.length, bytes: Buffer.byteLength(body), ...(alias.length ? { aliases: alias } : {}) });
 }
+const keyStatusPath = 'keys/key-status.json';
+const keyStatus = fs.existsSync(keyStatusPath)
+  ? JSON.parse(fs.readFileSync(keyStatusPath, 'utf8')) as { stable: boolean; reason: string | null }
+  : { stable: true, reason: null };
+if (keyStatus.reason) console.log(`note    signing key was not the configured one: ${keyStatus.reason}`);
+
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({
-  v: 1, issuer: secret.issuer, keyId: secret.keyId, created: now,
+  v: 1, issuer: secret.issuer, keyId: secret.keyId, created: now, keyStatus,
   sources: sources.map(s => ({ docId: s.docId, title: s.title, publisher: s.publisher, url: s.url, sha256: s.sha256, volume: s.volume ?? 'local' })),
   years, votes: index,
 }, null, 1));

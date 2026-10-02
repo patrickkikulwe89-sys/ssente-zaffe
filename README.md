@@ -226,8 +226,11 @@ deployed figures are reproducible from the government's own files or the build f
 **One repository setting is required**, once: *Settings → Pages → Build and deployment →
 Source: **GitHub Actions***.
 
-**One secret is strongly recommended**: `SSENTE_ISSUER_SECRET`, the 64-hex signing key from
-`keys/issuer.secret.json`. Without it each build generates a fresh key, so a card someone
+**One secret is strongly recommended**: `SSENTE_ISSUER_SECRET`, the 64-hex **`secretKey`**
+from `keys/issuer.secret.json` (not `keyId`, and not `publicKey` — which is also 64 hex
+characters and is therefore refused explicitly). A rejected secret does not block the deploy:
+the build falls back to an ephemeral key, says so in the issuer name, and publishes the reason
+as `keyStatus.reason` in `index.json`. `STRICT_SIGNING_KEY=1` makes it fail instead. Without it each build generates a fresh key, so a card someone
 shared last week stops verifying — which would defeat the point of signing cards at all. With
 it set, builds are reproducible and cards stay portable. The build labels itself an *ephemeral
 preview* when the secret is absent, rather than pretending otherwise.

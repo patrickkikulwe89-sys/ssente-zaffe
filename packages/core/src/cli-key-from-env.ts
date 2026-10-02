@@ -59,26 +59,29 @@ function isKnownPublicKey(candidate: string): boolean {
   } catch { return false; }
 }
 
-let secretKey: Uint8Array, ephemeral = false;
+let secretKey: Uint8Array, ephemeral = false, reason = '';
 if (hex && /^[0-9a-f]{64}$/.test(hex) && isKnownPublicKey(hex)) {
-  throw new Error('SSENTE_ISSUER_SECRET is a public key, not a secret key. Copy the "secretKey" field, not "publicKey".');
+  reason = 'the value supplied is a public key from the trust list, not a secret key — copy the "secretKey" field, not "publicKey"';
+  ({ secretKey } = generateKeypair());
+  ephemeral = true;
 } else if (hex && /^[0-9a-f]{64}$/.test(hex)) {
   secretKey = hexToBytes(hex);
 } else if (supplied && supplied.trim()) {
-  // Never print the value. Report its shape, enough to fix it and no more.
+  /**
+   * A rejected secret degrades the build instead of blocking it.
+   *
+   * Hard-failing here protects cards already shared, but it also takes the whole published
+   * site offline until a person fixes a secret — and the fallback is not silent: the issuer
+   * reads "ephemeral preview key", the key id changes, and the reason is published in the
+   * index. Availability of labelled data beats no data. Set STRICT_SIGNING_KEY=1 to fail
+   * instead, which is the right choice once an institution's key is in use.
+   */
   const shape = /^[0-9a-f]*$/.test(hex) ? `${hex.length} hex characters` : `${hex.length} characters, not all hexadecimal`;
-  const lines = [
-    `SSENTE_ISSUER_SECRET is not a valid signing key.`,
-    `  expected: 64 hexadecimal characters`,
-    `  received: ${shape}`,
-    hex.length === 16 ? `  that length matches a keyId — you may have copied "keyId" instead of "secretKey".` : '',
-    `  fix: copy the "secretKey" value out of keys/issuer.secret.json, or delete the`,
-    `       repository secret entirely to build with an ephemeral preview key instead.`,
-  ].filter(Boolean);
-  // Surface it on the job summary page, so the reason is visible without opening the log.
-  const summary = process.env.GITHUB_STEP_SUMMARY;
-  if (summary) { try { fs.appendFileSync(summary, `### Signing key rejected\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n`); } catch { /* best effort */ } }
-  throw new Error(lines.join('\n'));
+  reason = `expected 64 hexadecimal characters, received ${shape}`
+    + (hex.length === 16 ? ' — that length matches a keyId, so "keyId" may have been copied instead of "secretKey"' : '');
+  if (process.env.STRICT_SIGNING_KEY === '1') throw new Error(`SSENTE_ISSUER_SECRET rejected: ${reason}`);
+  ({ secretKey } = generateKeypair());
+  ephemeral = true;
 } else {
   ({ secretKey } = generateKeypair());
   ephemeral = true;
@@ -90,7 +93,16 @@ const label = ephemeral ? `${issuer} (ephemeral preview key)` : issuer;
 fs.mkdirSync(KEYS, { recursive: true });
 fs.writeFileSync(secretPath, JSON.stringify({ keyId: id, issuer: label, secretKey: bytesToHex(secretKey) }), { mode: 0o600 });
 fs.writeFileSync(path.join(KEYS, 'trusted.json'), JSON.stringify({ [id]: { issuer: label, publicKey: bytesToHex(publicKey) } }, null, 2));
+// Published alongside the cards, so the key's provenance can be inspected from the site
+// itself rather than only from a build log.
+fs.writeFileSync(path.join(KEYS, 'key-status.json'), JSON.stringify({ stable: !ephemeral, keyId: id, issuer: label, reason: reason || null }, null, 2));
+
 console.log(`${ephemeral ? '⚠ ephemeral' : 'stable'} signing key ${id} (${label})`);
+if (reason) console.log(`  SSENTE_ISSUER_SECRET was rejected: ${reason}`);
 if (ephemeral) console.log('  cards from this build will not verify against other builds — set SSENTE_ISSUER_SECRET for a stable key');
+const summary = process.env.GITHUB_STEP_SUMMARY;
+if (summary && reason) {
+  try { fs.appendFileSync(summary, `### Signing key rejected\n\n${reason}\n\nBuilt with an ephemeral preview key instead.\n`); } catch { /* best effort */ }
+}
 
 }

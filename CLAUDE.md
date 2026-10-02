@@ -164,7 +164,13 @@ Each of these cost real accuracy and is covered by a test. Do not reintroduce th
 `BASE_PATH` comes from its `base_path` output rather than the repository name.
 
 Set the repository secret `SSENTE_ISSUER_SECRET` (64 hex characters, from `secretKey` in
-`keys/issuer.secret.json`) so builds sign with a stable key. `normalise()` in
+`keys/issuer.secret.json`) so builds sign with a stable key. **A rejected secret degrades the
+build rather than blocking it**: it falls back to an ephemeral key, labels the issuer as a
+preview, and publishes the reason in `index.json` as `keyStatus.reason`, which is readable
+from the deployed site. Hard-failing instead took the whole published site offline until a
+person fixed a secret; set `STRICT_SIGNING_KEY=1` to get that behaviour once a real
+institution's key is in use. A `publicKey` is also 64 hex characters, so it is compared
+against the trust list and refused explicitly. `normalise()` in
 `cli-key-from-env.ts` tolerates how people actually paste it — either case, stray whitespace,
 or the whole JSON file — but a value that is not a key fails the build loudly rather than
 silently falling back, because an unintended ephemeral key breaks every card already shared; without it `cli-key-from-env.ts` generates an ephemeral key and labels the build
