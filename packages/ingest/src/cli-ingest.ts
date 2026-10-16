@@ -8,6 +8,7 @@ import { parseCgEstimates } from './cg-estimates.ts';
 import { reconcile } from './reconcile.ts';
 import { reconcileCg } from './reconcile-cg.ts';
 import { toCard, toCentralCard } from './cards.ts';
+import { loadCatalogues, type Lang } from './i18n.ts';
 import { signCard, signBundle } from '../../core/src/sign.ts';
 import type { Card } from '../../core/src/card.ts';
 
@@ -18,6 +19,10 @@ import type { Card } from '../../core/src/card.ts';
  * codes 601-999); Volume 1 covers the 152 central government votes (001-538), which is the
  * only place Kampala appears — it is Vote 122, KCCA, broken down by its five divisions.
  * The code ranges are disjoint, so a bundle is still just `<vote>.json`.
+ *
+ * Every card is issued once per reviewed language. English bundles stay at `<vote>.json` so
+ * existing links and the USSD gateway are untouched; other languages go to `<lang>/<vote>.json`,
+ * so nobody downloads a language they do not read. An unreviewed catalogue is not published.
  */
 const OUT = process.env.BUNDLE_DIR ?? 'apps/reader/public/bundles';
 const CACHE = '.cache';
@@ -60,7 +65,13 @@ const sourceOf = (s: SourceRec): Card['source'] => ({
   page: 1, table: 'V4', sha256: s.sha256, retrieved: s.retrieved,
 });
 
-const byVote = new Map<string, Card[]>();
+const catalogues = [...loadCatalogues().values()].filter(c => c.reviewed);
+console.log(`langs   ${catalogues.map(c => c.lang).join(', ')}`);
+const byLang = new Map<Lang, Map<string, Card[]>>(catalogues.map(c => [c.lang, new Map()]));
+const add = (lang: Lang, vote: string, card: Card) => {
+  const byVote = byLang.get(lang)!;
+  (byVote.get(vote) ?? byVote.set(vote, []).get(vote)!).push(card);
+};
 const aliases = new Map<string, Set<string>>();
 const quarantined: unknown[] = [];
 let years: { a: string; b: string } | null = null;
@@ -79,8 +90,7 @@ if (lg) {
   console.log(`  audit: exact ${summary.exact ?? 0} · within-rounding ${summary.rounding ?? 0} · QUARANTINED ${bad.length}`);
   quarantined.push(...bad);
   for (const it of groups.filter(g => g.status !== 'quarantined').flatMap(g => g.items)) {
-    const card = toCard(it, parsed.years, sourceOf(lg), now);
-    (byVote.get(it.vote) ?? byVote.set(it.vote, []).get(it.vote)!).push(card);
+    for (const cat of catalogues) add(cat.lang, it.vote, toCard(it, parsed.years, sourceOf(lg), now, cat));
   }
 }
 
@@ -98,8 +108,7 @@ if (cg) {
   console.log(`  audit: exact ${summary.exact ?? 0} · within-rounding ${summary.rounding ?? 0} · QUARANTINED ${bad.length} · funding identity failed ${inconsistent.length}`);
   quarantined.push(...bad, ...inconsistent);
   for (const r of groups.filter(g => g.status !== 'quarantined').flatMap(g => g.rows)) {
-    const card = toCentralCard(r, parsed.years, sourceOf(cg), now);
-    (byVote.get(r.vote) ?? byVote.set(r.vote, []).get(r.vote)!).push(card);
+    for (const cat of catalogues) add(cat.lang, r.vote, toCentralCard(r, parsed.years, sourceOf(cg), now, cat));
     // A division or city named inside a central vote is how people search for it — "Kawempe"
     // must find KCCA, which nothing in the vote's own name would do.
     if (/\b(Division|City|Municipality|District|Region)\b/.test(r.item))
@@ -113,16 +122,23 @@ if (quarantined.length) {
   console.log(`quarantine written: ${quarantined.length} entries never signed`);
 }
 
-// ---- sign, one bundle per vote ----------------------------------------------------------
-fs.mkdirSync(OUT, { recursive: true });
+// ---- sign, one bundle per vote per language ----------------------------------------------
 const index: { vote: string; name: string; level: string; cards: number; bytes: number; aliases?: string[] }[] = [];
-for (const [vote, cards] of [...byVote].sort(([a], [b]) => (a < b ? -1 : 1))) {
-  const signedCards = cards.map(c => signCard(c, secretKey));
-  const manifest = signBundle({ bundleId: `ssente/${vote}`, issuer: secret.issuer, created: now }, cards, secretKey);
-  const body = JSON.stringify({ v: 1, manifest, cards: signedCards });
-  fs.writeFileSync(path.join(OUT, `${vote}.json`), body);
-  const alias = [...(aliases.get(vote) ?? [])].sort();
-  index.push({ vote, name: cards[0]!.scope.voteName, level: cards[0]!.scope.level, cards: cards.length, bytes: Buffer.byteLength(body), ...(alias.length ? { aliases: alias } : {}) });
+const langBytes: Record<string, number> = {};
+for (const [lang, byVote] of byLang) {
+  const dir = lang === 'en' ? OUT : path.join(OUT, lang);
+  fs.mkdirSync(dir, { recursive: true });
+  for (const [vote, cards] of [...byVote].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    const signedCards = cards.map(c => signCard(c, secretKey));
+    const bundleId = lang === 'en' ? `ssente/${vote}` : `ssente/${lang}/${vote}`;
+    const manifest = signBundle({ bundleId, issuer: secret.issuer, created: now }, cards, secretKey);
+    const body = JSON.stringify({ v: 1, manifest, cards: signedCards });
+    fs.writeFileSync(path.join(dir, `${vote}.json`), body);
+    langBytes[lang] = (langBytes[lang] ?? 0) + Buffer.byteLength(body);
+    if (lang !== 'en') continue;
+    const alias = [...(aliases.get(vote) ?? [])].sort();
+    index.push({ vote, name: cards[0]!.scope.voteName, level: cards[0]!.scope.level, cards: cards.length, bytes: Buffer.byteLength(body), ...(alias.length ? { aliases: alias } : {}) });
+  }
 }
 const keyStatusPath = 'keys/key-status.json';
 const keyStatus = fs.existsSync(keyStatusPath)
@@ -133,7 +149,7 @@ if (keyStatus.reason) console.log(`note    signing key was not the configured on
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({
   v: 1, issuer: secret.issuer, keyId: secret.keyId, created: now, keyStatus,
   sources: sources.map(s => ({ docId: s.docId, title: s.title, publisher: s.publisher, url: s.url, sha256: s.sha256, volume: s.volume ?? 'local' })),
-  years, votes: index,
+  years, langs: catalogues.map(c => ({ lang: c.lang, name: c.name })), votes: index,
 }, null, 1));
 
 const total = index.reduce((s, v) => s + v.bytes, 0);
@@ -141,4 +157,5 @@ const sizes = index.map(v => v.bytes).sort((a, b) => a - b);
 const byLevel = index.reduce<Record<string, number>>((a, v) => ({ ...a, [v.level]: (a[v.level] ?? 0) + 1 }), {});
 console.log(`signed  ${index.reduce((s, v) => s + v.cards, 0)} cards into ${index.length} bundles  ${JSON.stringify(byLevel)}`);
 console.log(`size    total ${(total / 1e6).toFixed(2)} MB · median ${(sizes[Math.floor(sizes.length / 2)]! / 1024).toFixed(1)} KB · largest ${(sizes.at(-1)! / 1024).toFixed(1)} KB`);
+console.log(`langs   ${Object.entries(langBytes).map(([l, b]) => `${l} ${(b / 1e6).toFixed(2)} MB`).join(' · ')}`);
 console.log(`out     ${OUT}/`);

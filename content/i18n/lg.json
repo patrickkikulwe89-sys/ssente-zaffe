@@ -6,7 +6,7 @@
   "claims": {
     "local.cut": "{place} yalina {amountA} mu bbajeti y'omwaka gw'ebyensiimbi {fyA} ku \"{item}\". Mu bbajeti {draft} y'omwaka gw'ebyensiimbi {fyB} tewali ssente zaweereddwa.",
     "local.new": "{place} eweereddwa {amountB} ku \"{item}\" mu bbajeti {draft}y'omwaka gw'ebyensiimbi {fyB}, ate mu y'omwaka gw'ebyensiimbi {fyA} tewaaliwo.",
-    "local.flat": "Bbajeti ya {place} ku \"{item}\" tekyusibwa; esigala {amountB} okumala emyaka ebiri (omwaka gw'ebyensiimbi {fyA} n'ogwa {fyB}).",
+    "local.flat": "Bbajeti ya {place} ku \"{item}\" tekyusidwa; esigadde eri {amountB} okumala emyaka ebiri (omwaka gw'ebyensiimbi {fyA} n'ogwa {fyB}).",
     "local.up": "Bbajeti ya {place} ku \"{item}\" yeeyongedde {pct}%, okuva ku {amountA} mu mwaka gw'ebyensiimbi {fyA} okutuuka ku {amountB} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}.",
     "local.down": "Bbajeti ya {place} ku \"{item}\" ekendedde {pct}%, okuva ku {amountA} mu mwaka gw'ebyensiimbi {fyA} okutuuka ku {amountB} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}.",
     "place.cut": "{place} yalina {amountA} wansi wa {programme} mu mwaka gw'ebyensiimbi {fyA}. Mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB} tewali ssente zaweereddwa.",

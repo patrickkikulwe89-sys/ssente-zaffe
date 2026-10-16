@@ -16,6 +16,7 @@ npm install
 npm run keygen            # create keys/issuer.secret.json + keys/trusted.json (refuses to overwrite)
 npm run ingest            # fetch + hash-verify PDFs -> parse -> audit -> sign -> per-vote bundles (~40s)
 npm run verify <bundle>   # verify a bundle exactly as the reader does, then tamper one card and show refusal
+npm run i18n:preview -- 122 lg   # real cards side by side, English vs Luganda, one per sentence shape
 npm test                  # all tests
 npm run dev               # reader on :5173
 npm run build             # static site into apps/reader/dist/
@@ -68,6 +69,9 @@ manifests only name the package, and cross-package imports are relative paths
   lives** — Vote 122, KCCA, broken down by its five divisions). Vote-code ranges are disjoint,
   so a bundle is still `<vote>.json`. `reconcile.ts` and `reconcile-cg.ts` are the publication
   gates; `cards.ts` renders claim sentences from templates; `cli-ingest.ts` runs both.
+  `i18n.ts` loads `content/i18n/<lang>.json`; each reviewed catalogue yields its own signed
+  card per row (`lang` is part of the id). English bundles stay at `bundles/<vote>.json`;
+  other languages go to `bundles/<lang>/<vote>.json`, and `index.json` lists them in `langs`.
 - **`packages/reports`** — one HTTP file and one SQLite table for anonymous citizen verdicts.
 - **`packages/ussd`** — `menu.ts` is a **pure function** of the gateway's accumulated input
   string; `server.ts` speaks the Africa's Talking contract and serves a simulated handset
@@ -116,6 +120,18 @@ confusingly similar Table V2 by the **colon** after `Programme` and by 2-digit r
    the gap. Do not ship it to make ministries look richer — find the anchor first.
 10. **The signing secret never enters the repo.** `keys/*.secret.json` is gitignored;
    `keys/trusted.json` holds only public keys and is committed.
+
+## Translations
+
+Templates hold **slots, never figures**: `validateCatalogue` refuses any digit *and* any
+Luganda quantity word (`buwumbi`, `obukadde`, `ebituundu`…), and requires every slot the
+English template has. The second guard exists because a reviewer once wrote one card's
+amounts out in words — correct Luganda, and it would have printed Kawempe's figures on every
+decreasing budget line in the country. English cards must stay byte-identical to the
+pre-template sentences (a test pins two). Non-English cards carry
+`provenance.aiAssisted: ['translation']`. The Luganda wording is the reviewer's call — do not
+"improve" it without them. Figures are still digits; spoken Luganda numerals would need a
+generated, separately tested converter, never hand-typed words.
 
 ## The source document's grammar, and defects already fixed
 

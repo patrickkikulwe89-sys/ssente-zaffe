@@ -14,6 +14,7 @@
     "keygen": "tsx packages/core/src/cli-keygen.ts",
     "ingest": "tsx packages/ingest/src/cli-ingest.ts",
     "verify": "tsx packages/core/src/cli-verify.ts",
+    "i18n:preview": "tsx packages/ingest/src/cli-i18n-preview.ts",
     "dev": "npm run dev --workspace @ssente/reader",
     "build": "npm run build --workspace @ssente/reader",
     "reports": "tsx packages/reports/src/server.ts",
