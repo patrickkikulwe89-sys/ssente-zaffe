@@ -1,0 +1,33 @@
+{
+  "lang": "lg",
+  "name": "Luganda",
+  "reviewed": true,
+  "note": "Reviewed by Patrick (Luganda speaker) on 2026-10-07. His grammar corrections are kept verbatim; figures he had written out in words were removed, because a template renders thousands of different cards and a spelled-out figure would be wrong on all but one. See numeralWords() in i18n.ts, which now refuses them.",
+  "claims": {
+    "local.cut": "{place} yalina {amountA} mu bbajeti y'omwaka gw'ebyensiimbi {fyA} ku \"{item}\". Mu bbajeti {draft} y'omwaka gw'ebyensiimbi {fyB} tewali ssente zaweereddwa.",
+    "local.new": "{place} eweereddwa {amountB} ku \"{item}\" mu bbajeti {draft}y'omwaka gw'ebyensiimbi {fyB}, ate mu y'omwaka gw'ebyensiimbi {fyA} tewaaliwo.",
+    "local.flat": "Bbajeti ya {place} ku \"{item}\" tekyusibwa; esigala {amountB} okumala emyaka ebiri (omwaka gw'ebyensiimbi {fyA} n'ogwa {fyB}).",
+    "local.up": "Bbajeti ya {place} ku \"{item}\" yeeyongedde {pct}%, okuva ku {amountA} mu mwaka gw'ebyensiimbi {fyA} okutuuka ku {amountB} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}.",
+    "local.down": "Bbajeti ya {place} ku \"{item}\" ekendedde {pct}%, okuva ku {amountA} mu mwaka gw'ebyensiimbi {fyA} okutuuka ku {amountB} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}.",
+    "place.cut": "{place} yalina {amountA} wansi wa {programme} mu mwaka gw'ebyensiimbi {fyA}. Mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB} tewali ssente zaweereddwa.",
+    "place.new": "{place} eweereddwa {amountB} wansi wa {programme} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}, ate mu gwa {fyA} tewaaliwo.",
+    "place.flat": "Bbajeti ya {place} wansi wa {programme} tekyusidwa; esigadde eri {amountB} okumala emyaka ebiri (ogwa {fyA} n'ogwa {fyB}).",
+    "place.up": "Bbajeti ya {place} wansi wa {programme} yeeyongedde {pct}%, okuva ku {amountA} mu mwaka gw'ebyensiimbi {fyA} okutuuka ku {amountB} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}.",
+    "place.down": "Bbajeti ya {place} wansi wa {programme} ekendedde {pct}%, okuva ku {amountA} mu mwaka gw'ebyensiimbi {fyA} okutuuka ku {amountB} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}.",
+    "org.flat": "{org} eweereddwa {amountB} ku \"{item}\" wansi wa {programme} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}, nga tekyusidwa okuva mu gwa {fyA}.",
+    "org.new": "{org} eweereddwa {amountB} ku \"{item}\" wansi wa {programme} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}, ate mu gwa {fyA} tewaaliwo.",
+    "org.changed": "{org} eweereddwa {amountB} ku \"{item}\" wansi wa {programme} mu bbajeti {draft}ey'omwaka gw'ebyensiimbi {fyB}, okuva ku {amountA} mu gwa {fyA}."
+  },
+  "words": {
+    "draft": "enteekateeka "
+  },
+  "topics": {
+    "health": "ebyobulamu",
+    "education": "ebyenjigiriza",
+    "water": "amazzi",
+    "roads": "enguudo",
+    "administration": "obuminsitule",
+    "production": "amakolero",
+    "other": "ebirala"
+  }
+}
