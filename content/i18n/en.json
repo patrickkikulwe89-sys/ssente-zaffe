@@ -1,0 +1,25 @@
+{
+  "lang": "en",
+  "name": "English",
+  "reviewed": true,
+  "claims": {
+    "local.cut":   "{place} had {amountA} budgeted for \"{item}\" in FY{fyA}. The FY{fyB} {draft}budget allocates nothing.",
+    "local.new":   "{place} is allocated {amountB} for \"{item}\" in the FY{fyB} {draft}budget, having had nothing in FY{fyA}.",
+    "local.flat":  "{place}'s budget for \"{item}\" is unchanged at {amountB} for a second year (FY{fyA} and FY{fyB}).",
+    "local.up":    "{place}'s budget for \"{item}\" goes up {pct}%, from {amountA} in FY{fyA} to {amountB} in the FY{fyB} {draft}budget.",
+    "local.down":  "{place}'s budget for \"{item}\" goes down {pct}%, from {amountA} in FY{fyA} to {amountB} in the FY{fyB} {draft}budget.",
+    "place.cut":   "{place} had {amountA} under {programme} in FY{fyA}. The FY{fyB} {draft}budget allocates nothing.",
+    "place.new":   "{place} is allocated {amountB} under {programme} in the FY{fyB} {draft}budget, having had nothing in FY{fyA}.",
+    "place.flat":  "{place}'s budget under {programme} is unchanged at {amountB} for a second year (FY{fyA} and FY{fyB}).",
+    "place.up":    "{place}'s budget under {programme} goes up {pct}%, from {amountA} in FY{fyA} to {amountB} in the FY{fyB} {draft}budget.",
+    "place.down":  "{place}'s budget under {programme} goes down {pct}%, from {amountA} in FY{fyA} to {amountB} in the FY{fyB} {draft}budget.",
+    "org.flat":    "{org} is allocated {amountB} for \"{item}\" under {programme} in the FY{fyB} {draft}budget, unchanged from FY{fyA}.",
+    "org.new":     "{org} is allocated {amountB} for \"{item}\" under {programme} in the FY{fyB} {draft}budget, having had nothing in FY{fyA}.",
+    "org.changed": "{org} is allocated {amountB} for \"{item}\" under {programme} in the FY{fyB} {draft}budget, from {amountA} in FY{fyA}."
+  },
+  "words": { "draft": "draft " },
+  "topics": {
+    "health": "health", "education": "education", "water": "water", "roads": "roads",
+    "administration": "administration", "production": "production", "other": "other"
+  }
+}
